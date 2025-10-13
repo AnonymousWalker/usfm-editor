@@ -25,6 +25,7 @@
         "Unified Standard Format Markers"
     ],
     "scripts": {
+        "start": "styleguidist server",
         "styleguidist": "styleguidist build",
         "babel": "babel src --out-dir dist --copy-files --include-dotfiles --presets @babel/preset-react --extensions \".ts,.js,.tsx,.jsx\"",
         "clean": "rm -rf dist/*",
