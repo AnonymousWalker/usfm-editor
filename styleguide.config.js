@@ -17,26 +17,13 @@ module.exports = {
             : require("react-docgen").parse(source, resolver, handlers)
     },
     pagePerSection: true,
+    showSidebar: false,
+    exampleMode: 'hide',
+    usageMode: 'hide',
     sections: [
         {
             name: "Full-Featured Editor",
             content: "src/demo/full-featured-editor.md",
-        },
-        {
-            name: "Editor Wrapping",
-            content: "src/demo/editor-wrapping.md",
-        },
-        {
-            name: "Custom Toolbar",
-            content: "src/demo/custom-toolbar.md",
-        },
-        {
-            name: "Separated Toolbar",
-            content: "src/demo/separated-toolbar.md",
-        },
-        {
-            name: "Style Override",
-            content: "src/demo/style-override.md",
-        },
+        }
     ],
 }

@@ -1,7 +1,3 @@
-This demo shows the typical use-case of the Usfm Editor. It makes use of the
-UsfmEditor component, which includes a toolbar, as well as chapter paging
-functionality and a chapter selection dropdown menu.
-
 ```jsx
 const usfmString = `
 \\id GEN
@@ -47,7 +43,7 @@ class Demo extends React.Component {
         return (
             <div className="row">
                 <div className="column column-left">
-                    <h2>Editor</h2>
+                    <h3>Select Chapter</h3>
 
                     {/* The editor can be given a ref of type UsfmEditorRef
                      to have access to the editor API (use React.createRef<UsfmEditorRef>)

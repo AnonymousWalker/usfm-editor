@@ -33,7 +33,7 @@ function createUsfmEditor(): ForwardRefUsfmEditor<UsfmEditorRef> {
     return flowRight(
         withChapterSelection,
         withChapterPaging,
-        withToolbar,
+        // withToolbar,
         createBasicUsfmEditor
     )()
 }
