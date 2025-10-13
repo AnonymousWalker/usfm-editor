@@ -1,9 +1,10 @@
-import { Range, Editor, Transforms, Path, Node } from "slate"
+import { Range, Editor, Transforms, Path, Node, Text } from "slate"
 import { MyEditor } from "./helpers/MyEditor"
 import { MyTransforms } from "./helpers/MyTransforms"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
 import { ReactEditor } from "slate-react"
 import { SelectionTransforms } from "./helpers/SelectionTransforms"
+import { emptyVerseWithVerseNumber } from "../transforms/basicSlateNodeFactory"
 
 export function handleKeyPress(
     event: React.KeyboardEvent,
@@ -99,6 +100,63 @@ export const withDelete = (editor: ReactEditor): ReactEditor => {
         }
         deleteForward(...args)
     }
+    return editor
+}
+
+export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
+    const { insertText } = editor
+
+    editor.insertText = (text: string) => {
+        const { selection } = editor
+
+        // Only trigger when inserting a space
+        if (text === " " && selection && Range.isCollapsed(selection)) {
+            const currentNode = Editor.node(editor, selection.anchor.path)
+            
+            if (currentNode && Text.isText(currentNode[0])) {
+                const textContent = currentNode[0].text
+                const offset = selection.anchor.offset
+                
+                // Get the text before the cursor
+                const textBeforeCursor = textContent.substring(0, offset)
+                
+                // Check if it matches the pattern \v {number}
+                const versePattern = /\\v\s+(\d+)$/
+                const match = textBeforeCursor.match(versePattern)
+                
+                if (match) {
+                    const verseNumber = match[1]
+                    const matchLength = match[0].length
+                    
+                    // Delete the \v {number} text
+                    const deleteStart = offset - matchLength
+                    Transforms.delete(editor, {
+                        at: {
+                            anchor: { path: selection.anchor.path, offset: deleteStart },
+                            focus: { path: selection.anchor.path, offset: offset }
+                        }
+                    })
+                    
+                    // Get the verse node to insert after
+                    const verseNodeEntry = MyEditor.getVerseNode(editor)
+                    
+                    if (verseNodeEntry) {
+                        const [_verse, versePath] = verseNodeEntry
+                        // Insert new verse after current verse
+                        const newVerse = emptyVerseWithVerseNumber(verseNumber)
+                        Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) })
+                        // Move cursor to the new verse
+                        MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath))
+                    }
+                    
+                    return
+                }
+            }
+        }
+
+        insertText(text)
+    }
+
     return editor
 }
 

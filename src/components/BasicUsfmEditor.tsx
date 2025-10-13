@@ -20,6 +20,7 @@ import {
     withBackspace,
     withDelete,
     withEnter,
+    withVerseShortcut,
 } from "../plugins/keyHandlers"
 import { slateToUsfm } from "../transforms/slateToUsfm"
 import { debounce, flowRight, isEqual } from "lodash"
@@ -78,6 +79,7 @@ export class BasicUsfmEditor
             withBackspace,
             withDelete,
             withEnter,
+            withVerseShortcut,
             withNormalize,
             withReact,
             createEditor
