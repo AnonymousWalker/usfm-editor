@@ -140,47 +140,59 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
     editor.insertText = (text: string) => {
         const { selection } = editor
 
-        // Only trigger when inserting a space
-        if (text === " " && selection && Range.isCollapsed(selection)) {
+        if (selection && Range.isCollapsed(selection)) {
             const currentNode = Editor.node(editor, selection.anchor.path)
             
             if (currentNode && Text.isText(currentNode[0])) {
                 const textContent = currentNode[0].text
                 const offset = selection.anchor.offset
-                
-                // Get the text before the cursor
                 const textBeforeCursor = textContent.substring(0, offset)
                 
-                // Check if it matches the pattern \v {number}
-                const versePattern = /\\v\s+(\d+)$/
-                const match = textBeforeCursor.match(versePattern)
-                
-                if (match) {
-                    const verseNumber = match[1]
-                    const matchLength = match[0].length
+                // Both patterns trigger on space character
+                if (text === " ") {
+                    let verseNumber: string | null = null
+                    let matchLength = 0
                     
-                    // Delete the \v {number} text
-                    const deleteStart = offset - matchLength
-                    Transforms.delete(editor, {
-                        at: {
-                            anchor: { path: selection.anchor.path, offset: deleteStart },
-                            focus: { path: selection.anchor.path, offset: offset }
+                    // Pattern 1: \v {number} followed by space
+                    const versePattern = /\\v\s+(\d+)$/
+                    const verseMatch = textBeforeCursor.match(versePattern)
+                    
+                    if (verseMatch) {
+                        verseNumber = verseMatch[1]
+                        matchLength = verseMatch[0].length
+                    } else {
+                        // Pattern 2: {number}.  (number followed by period and double space)
+                        const numberPattern = /(^|\s)(\d+)\.\s$/
+                        const numberMatch = textBeforeCursor.match(numberPattern)
+                        
+                        if (numberMatch) {
+                            verseNumber = numberMatch[2]
+                            matchLength = numberMatch[0].length
                         }
-                    })
-                    
-                    // Get the verse node to insert after
-                    const verseNodeEntry = MyEditor.getVerseNode(editor)
-                    
-                    if (verseNodeEntry) {
-                        const [_verse, versePath] = verseNodeEntry
-                        // Insert new verse after current verse
-                        const newVerse = emptyVerseWithVerseNumber(verseNumber)
-                        Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) })
-                        // Move cursor to the new verse
-                        MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath))
                     }
                     
-                    return
+                    // If either pattern matched, create the verse
+                    if (verseNumber) {
+                        // Delete the matched text
+                        const deleteStart = offset - matchLength
+                        Transforms.delete(editor, {
+                            at: {
+                                anchor: { path: selection.anchor.path, offset: deleteStart },
+                                focus: { path: selection.anchor.path, offset: offset }
+                            }
+                        })
+                        
+                        // Insert new verse
+                        const verseNodeEntry = MyEditor.getVerseNode(editor)
+                        if (verseNodeEntry) {
+                            const [_verse, versePath] = verseNodeEntry
+                            const newVerse = emptyVerseWithVerseNumber(verseNumber)
+                            Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) })
+                            MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath))
+                        }
+                        
+                        return
+                    }
                 }
             }
         }
