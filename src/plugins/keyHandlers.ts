@@ -5,6 +5,7 @@ import { UsfmMarkers } from "../utils/UsfmMarkers"
 import { ReactEditor } from "slate-react"
 import { SelectionTransforms } from "./helpers/SelectionTransforms"
 import { emptyVerseWithVerseNumber } from "../transforms/basicSlateNodeFactory"
+import { VerseTransforms } from "./helpers/VerseTransforms"
 
 export function handleKeyPress(
     event: React.KeyboardEvent,
@@ -44,7 +45,37 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                 Editor.parent(editor, selection?.anchor)?.[1]
             )
         ) {
-            if (
+            // Check if we're at the start of an inline container with a verse number before it
+            if (MyEditor.isNearbyBlockAVerseNumber(editor, "previous")) {
+                const prevBlock = MyEditor.getPreviousBlock(editor)?.[0]
+                
+                // Don't allow deleting the "front" verse marker
+                if (prevBlock && Node.string(prevBlock) === "front") {
+                    console.debug("Cannot delete 'front' verse, skipping backspace")
+                    return
+                }
+                
+                // Delete the verse number and merge with previous verse
+                const verseNodeEntry = MyEditor.getVerseNode(editor)
+                if (verseNodeEntry) {
+                    const [_verse, versePath] = verseNodeEntry
+                    const verseNumPath = versePath.concat(0)
+                    
+                    // Check if there's a previous verse to merge into
+                    const prevVerse = MyEditor.getPreviousVerse(editor, versePath)
+                    if (prevVerse) {
+                        // Use the existing transform to remove verse and concatenate
+                        VerseTransforms.removeVerseAndConcatenateContentsWithPrevious(
+                            editor,
+                            verseNumPath
+                        )
+                    } else {
+                        // If no previous verse, just remove the verse number
+                        Transforms.removeNodes(editor, { at: verseNumPath })
+                    }
+                }
+                return
+            } else if (
                 MyEditor.isNearbyBlockAVerseOrChapterNumberOrNull(
                     editor,
                     "previous"
