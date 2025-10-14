@@ -51,6 +51,7 @@ import {
 import NodeRules from "../utils/NodeRules"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
 import NodeTypes from "../utils/NodeTypes"
+import { SelectionContextMenu } from "./SelectionContextMenu"
 
 export const createBasicUsfmEditor =
     (): ForwardRefUsfmEditor<BasicUsfmEditor> => {
@@ -79,6 +80,7 @@ export class BasicUsfmEditor
             value: usfmToSlate(props.usfmString),
             selectedVerse: undefined,
             prevUsfmStringProp: props.usfmString,
+            showSelectionMenu: false,
         }
 
         this.slateEditor = flowRight(
@@ -104,6 +106,7 @@ export class BasicUsfmEditor
         return {
             value: usfmToSlate(props.usfmString),
             prevUsfmStringProp: props.usfmString,
+            showSelectionMenu: false,
         }
     }
 
@@ -192,8 +195,28 @@ export class BasicUsfmEditor
     handleChange: (value: Descendant[]) => void = (value) => {
         console.debug("after change", value)
         this.fixSelectionOnChapterOrVerseNumber()
-        this.setState({ value: value })
+        this.setState({ value: value }, () => {
+            // Update selection menu state after state update
+            this.updateSelectionMenuState()
+        })
         this.scheduleOnChange(value)
+    }
+
+    updateSelectionMenuState = (): void => {
+        const selection = this.slateEditor.selection
+        const hasExpandedSelection =
+            !!selection && !Range.isCollapsed(selection)
+        
+        // Only show menu if there's an expanded selection in an editable area
+        const shouldShow = hasExpandedSelection && !this.props.readOnly
+        
+        if (this.state.showSelectionMenu !== shouldShow) {
+            this.setState({ showSelectionMenu: shouldShow })
+        }
+    }
+
+    handleCloseSelectionMenu = (): void => {
+        this.setState({ showSelectionMenu: false })
     }
 
     scheduleOnChange = debounce((newValue: Node[]) => {
@@ -214,6 +237,16 @@ export class BasicUsfmEditor
             return
         }
         handleKeyPress(event, this.slateEditor)
+    }
+
+    onMouseUp = (): void => {
+        // Check for selection when mouse is released (after potential drag select)
+        setTimeout(() => this.updateSelectionMenuState(), 0)
+    }
+
+    onKeyUp = (): void => {
+        // Check for selection after keyboard navigation (e.g., Shift+Arrow keys)
+        setTimeout(() => this.updateSelectionMenuState(), 0)
     }
 
     decorate = (entry: NodeEntry): Range[] => {
@@ -400,7 +433,13 @@ export class BasicUsfmEditor
                     decorate={this.decorate}
                     spellCheck={false}
                     onKeyDown={this.onKeyDown}
+                    onKeyUp={this.onKeyUp}
+                    onMouseUp={this.onMouseUp}
                     className={"usfm-editor"}
+                />
+                <SelectionContextMenu
+                    open={this.state.showSelectionMenu}
+                    handleClose={this.handleCloseSelectionMenu}
                 />
             </Slate>
         )
@@ -411,6 +450,7 @@ interface BasicUsfmEditorState {
     value: Descendant[]
     selectedVerse?: Verse
     prevUsfmStringProp: string
+    showSelectionMenu: boolean
 }
 
 interface VerseStartAndEnd {
