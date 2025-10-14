@@ -8,6 +8,7 @@ import {
     Range,
     Element,
     Descendant,
+    NodeEntry,
 } from "slate"
 import {
     renderElementByType,
@@ -22,6 +23,11 @@ import {
     withEnter,
     withVerseShortcut,
 } from "../plugins/keyHandlers"
+import {
+    withInlineSuggestion,
+    handleTabKeyForSuggestion,
+    decorateWithSuggestion,
+} from "../plugins/inlineSuggestion"
 import { slateToUsfm } from "../transforms/slateToUsfm"
 import { debounce, flowRight, isEqual } from "lodash"
 import { MyTransforms } from "../plugins/helpers/MyTransforms"
@@ -80,6 +86,7 @@ export class BasicUsfmEditor
             withDelete,
             withEnter,
             withVerseShortcut,
+            withInlineSuggestion,
             withNormalize,
             withReact,
             createEditor
@@ -202,7 +209,15 @@ export class BasicUsfmEditor
     }, 200)
 
     onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+        // Handle Tab key for accepting suggestions
+        if (handleTabKeyForSuggestion(event, this.slateEditor)) {
+            return
+        }
         handleKeyPress(event, this.slateEditor)
+    }
+
+    decorate = (entry: NodeEntry): Range[] => {
+        return decorateWithSuggestion(this.slateEditor, entry)
     }
 
     fixSelectionOnChapterOrVerseNumber(): void {
@@ -382,6 +397,7 @@ export class BasicUsfmEditor
                     readOnly={this.props.readOnly}
                     renderElement={renderElementByType}
                     renderLeaf={renderLeafByProps}
+                    decorate={this.decorate}
                     spellCheck={false}
                     onKeyDown={this.onKeyDown}
                     className={"usfm-editor"}

@@ -14,6 +14,21 @@ export function renderLeafByProps(props: RenderLeafProps): JSX.Element {
     if (props.leaf[UsfmMarkers.SPECIAL_TEXT.bk])
         className = className + "usfm-marker-bk "
 
+    // Handle inline suggestions
+    const suggestion = (props.leaf as any).suggestion
+    const isSuggestion = (props.leaf as any).isSuggestion
+
+    if (isSuggestion && suggestion) {
+        return (
+            <span {...props.attributes} className={className.trim()}>
+                {props.children}
+                <span className="usfm-editor-suggestion" contentEditable={false}>
+                    {suggestion}
+                </span>
+            </span>
+        )
+    }
+
     return React.createElement(
         type,
         { className: className.trim(), ...props.attributes },

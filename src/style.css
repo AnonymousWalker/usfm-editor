@@ -161,3 +161,13 @@ hr.usfm-editor-hr {
 .usfm-editor-border-bottom {
     border-bottom: 3px solid rgb(238, 238, 238);
 }
+
+.usfm-editor-suggestion {
+    color: rgb(180, 180, 180);
+    opacity: 0.6;
+    pointer-events: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
