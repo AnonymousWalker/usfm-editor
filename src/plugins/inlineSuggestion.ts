@@ -2,7 +2,7 @@ import { Range, Editor, Transforms, Text, Node as SlateNode, NodeEntry, Element,
 import { ReactEditor } from "slate-react"
 import { MyEditor } from "./helpers/MyEditor"
 import { MyTransforms } from "./helpers/MyTransforms"
-import { emptyVerseWithVerseNumber } from "../transforms/basicSlateNodeFactory"
+import { emptyVerseWithVerseNumber, emptyInlineContainer } from "../transforms/basicSlateNodeFactory"
 
 // Type for suggestion state
 export interface SuggestionState {
@@ -160,13 +160,44 @@ export function handleTabKeyForSuggestion(
                 }
             }
             
-            // Create new verse directly
+            // Create new verse and split contents at the cursor
             const verseNodeEntry = MyEditor.getVerseNode(editor)
-            if (verseNodeEntry) {
+            if (verseNodeEntry && editor.selection) {
                 const [_verse, versePath] = verseNodeEntry
+
+                // Compute text before/after the cursor within the current verse
+                const originalInlineContainerPath = versePath.concat(1)
+                const [inlineContainer] = Editor.node(editor, originalInlineContainerPath)
+                const fullVerseText = SlateNode.string(inlineContainer)
+                const verseStartPoint = Editor.start(editor, originalInlineContainerPath)
+                const preRange = Editor.range(editor, verseStartPoint, editor.selection.anchor)
+                const textBeforeCursor = Editor.string(editor, preRange)
+                const textAfterCursor = fullVerseText.slice(textBeforeCursor.length)
+
+                // Create and insert the new verse after the current one
                 const newVerse = emptyVerseWithVerseNumber(verseNumber)
-                Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) })
-                MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath))
+                const newVersePath = Path.next(versePath)
+                Transforms.insertNodes(editor, newVerse, { at: newVersePath })
+
+                // Reset both inline containers to empty
+                const newInlineContainerPath = newVersePath.concat(1)
+                MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer())
+                MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
+
+                // Populate with split text
+                MyTransforms.replaceText(
+                    editor,
+                    originalInlineContainerPath.concat(0),
+                    textBeforeCursor
+                )
+                MyTransforms.replaceText(
+                    editor,
+                    newInlineContainerPath.concat(0),
+                    textAfterCursor
+                )
+
+                // Place cursor at the start of the new verse content
+                Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
             }
             
             clearSuggestion(editor)
