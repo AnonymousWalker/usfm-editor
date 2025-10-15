@@ -12,7 +12,7 @@ import ListItemText from "@material-ui/core/ListItemText"
 import AddIcon from "@material-ui/icons/Add"
 import { Range, Editor, Path, Node, Element, Transforms } from "slate"
 import NodeTypes from "../utils/NodeTypes"
-import { verseNumber } from "../transforms/basicSlateNodeFactory"
+import { verseNumber, emptyInlineContainer } from "../transforms/basicSlateNodeFactory"
 
 type SelectionContextMenuProps = {
     open: boolean
@@ -68,6 +68,13 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         const verseNumberOrRange = Node.string(verse.children[0])
         const [rangeStart, rangeEnd] = verseNumberOrRange.split("-")
         
+        // Log the verse text, and the text before/after the selection start
+        const inlineContainerPath = versePath.concat(1)
+        const [inlineContainer] = Editor.node(editor, inlineContainerPath)
+        const fullVerseText = Node.string(inlineContainer)
+        const verseStartPoint = Editor.start(editor, inlineContainerPath)
+        const preRange = Editor.range(editor, verseStartPoint, selectionStart)
+
         // Calculate the new verse number
         const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart)
         const newVerseNum = currentVerseNum + 1
@@ -85,8 +92,31 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         // Remove the old verse number node and insert a new one
         MyTransforms.replaceNodes(editor, newVerseNumPath, verseNumber(newVerseNum.toString()))
 
-        // Move cursor to the start of the new verse content
+        // Move the text after the selection into the new verse's inline container,
+        // and keep only the text before the selection in the original verse's inline container
+        const originalInlineContainerPath = versePath.concat(1)
         const newInlineContainerPath = newVersePath.concat(1)
+
+        // Reset both inline containers to empty, then insert the appropriate text
+        const textBeforeSelectionStart = Editor.string(editor, preRange)
+        const textAfterSelectionStart = fullVerseText.slice(
+            textBeforeSelectionStart.length
+        )
+        
+        MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer())
+        MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
+        MyTransforms.replaceText(
+            editor,
+            originalInlineContainerPath.concat(0),
+            textBeforeSelectionStart
+        )
+        MyTransforms.replaceText(
+            editor,
+            newInlineContainerPath.concat(0),
+            textAfterSelectionStart
+        )
+
+        // Move cursor to the start of the new verse content
         Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
 
         handleClose()
