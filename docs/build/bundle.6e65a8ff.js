@@ -37,7 +37,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, "/* Hide extra breaks that are not crea
 
 /***/ }),
 
-/***/ 60484:
+/***/ 57935:
 /***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -22590,12 +22590,52 @@ const withBackspace = (editor) => {
                     // Check if there's a previous verse to merge into
                     const prevVerse = MyEditor.getPreviousVerse(editor, versePath);
                     if (prevVerse) {
+                        // Capture the length of the previous verse's text before merging
+                        const prevVersePath = prevVerse[1];
+                        const prevInlineContainerPath = prevVersePath.concat(1);
+                        let prevTextLength = 0;
+                        try {
+                            const [prevInlineContainer] = Editor.node(editor, prevInlineContainerPath);
+                            prevTextLength = index_es_Node.string(prevInlineContainer).length;
+                        }
+                        catch (_) {
+                            prevTextLength = 0;
+                        }
                         // Use the existing transform to remove verse and concatenate
                         VerseTransforms.removeVerseAndConcatenateContentsWithPrevious(editor, verseNumPath);
+                        // After merge, place cursor at the offset equal to the previous text length
+                        try {
+                            // Start at the beginning of the previous inline container
+                            Transforms.select(editor, Editor.start(editor, prevInlineContainerPath));
+                            if (prevTextLength > 0) {
+                                Transforms.move(editor, {
+                                    distance: prevTextLength,
+                                    unit: "offset",
+                                });
+                            }
+                        }
+                        catch (e) {
+                            // Fallbacks if structure differs unexpectedly
+                            try {
+                                Transforms.select(editor, Editor.end(editor, prevInlineContainerPath));
+                            }
+                            catch (_) {
+                                Transforms.select(editor, Editor.end(editor, prevVersePath));
+                            }
+                        }
                     }
                     else {
                         // If no previous verse, just remove the verse number
                         Transforms.removeNodes(editor, { at: verseNumPath });
+                        // Keep cursor at the start of the verse contents (now at index 0)
+                        const inlineContainerPath = versePath.concat(0);
+                        try {
+                            Transforms.select(editor, Editor.start(editor, inlineContainerPath));
+                        }
+                        catch (e) {
+                            // Fall back to start of the verse node
+                            Transforms.select(editor, Editor.start(editor, versePath));
+                        }
                     }
                 }
                 return;
@@ -22665,7 +22705,7 @@ const withVerseShortcut = (editor) => {
                         const numberMatch = textBeforeCursor.match(numberPattern);
                         if (numberMatch) {
                             verseNumber = numberMatch[2];
-                            matchLength = numberMatch[0].length;
+                            matchLength = numberMatch[0].length - 1; // don't include the prefix space
                         }
                     }
                     // If either pattern matched, create the verse
@@ -22678,13 +22718,31 @@ const withVerseShortcut = (editor) => {
                                 focus: { path: selection.anchor.path, offset: offset }
                             }
                         });
-                        // Insert new verse
+                        // Insert new verse and split contents at the cursor
                         const verseNodeEntry = MyEditor.getVerseNode(editor);
-                        if (verseNodeEntry) {
+                        if (verseNodeEntry && editor.selection) {
                             const [_verse, versePath] = verseNodeEntry;
+                            // Compute text before/after the cursor within the current verse
+                            const originalInlineContainerPath = versePath.concat(1);
+                            const [inlineContainer] = Editor.node(editor, originalInlineContainerPath);
+                            const fullVerseText = index_es_Node.string(inlineContainer);
+                            const verseStartPoint = Editor.start(editor, originalInlineContainerPath);
+                            const preRange = Editor.range(editor, verseStartPoint, editor.selection.anchor);
+                            const textBeforeCursor = Editor.string(editor, preRange);
+                            const textAfterCursor = fullVerseText.slice(textBeforeCursor.length);
+                            // Create and insert the new verse after the current one
                             const newVerse = emptyVerseWithVerseNumber(verseNumber);
-                            Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) });
-                            MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath));
+                            const newVersePath = Path.next(versePath);
+                            Transforms.insertNodes(editor, newVerse, { at: newVersePath });
+                            // Reset both inline containers to empty
+                            const newInlineContainerPath = newVersePath.concat(1);
+                            MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer());
+                            MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer());
+                            // Populate with split text
+                            MyTransforms.replaceText(editor, originalInlineContainerPath.concat(0), textBeforeCursor);
+                            MyTransforms.replaceText(editor, newInlineContainerPath.concat(0), textAfterCursor);
+                            // Place cursor at the start of the new verse content
+                            Transforms.select(editor, Editor.start(editor, newInlineContainerPath));
                         }
                         return;
                     }
@@ -22894,13 +22952,31 @@ function handleTabKeyForSuggestion(event, editor) {
                     });
                 }
             }
-            // Create new verse directly
+            // Create new verse and split contents at the cursor
             const verseNodeEntry = MyEditor.getVerseNode(editor);
-            if (verseNodeEntry) {
+            if (verseNodeEntry && editor.selection) {
                 const [_verse, versePath] = verseNodeEntry;
+                // Compute text before/after the cursor within the current verse
+                const originalInlineContainerPath = versePath.concat(1);
+                const [inlineContainer] = Editor.node(editor, originalInlineContainerPath);
+                const fullVerseText = index_es_Node.string(inlineContainer);
+                const verseStartPoint = Editor.start(editor, originalInlineContainerPath);
+                const preRange = Editor.range(editor, verseStartPoint, editor.selection.anchor);
+                const textBeforeCursor = Editor.string(editor, preRange);
+                const textAfterCursor = fullVerseText.slice(textBeforeCursor.length);
+                // Create and insert the new verse after the current one
                 const newVerse = emptyVerseWithVerseNumber(verseNumber);
-                Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) });
-                MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath));
+                const newVersePath = Path.next(versePath);
+                Transforms.insertNodes(editor, newVerse, { at: newVersePath });
+                // Reset both inline containers to empty
+                const newInlineContainerPath = newVersePath.concat(1);
+                MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer());
+                MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer());
+                // Populate with split text
+                MyTransforms.replaceText(editor, originalInlineContainerPath.concat(0), textBeforeCursor);
+                MyTransforms.replaceText(editor, newInlineContainerPath.concat(0), textAfterCursor);
+                // Place cursor at the start of the new verse content
+                Transforms.select(editor, Editor.start(editor, newInlineContainerPath));
             }
             clearSuggestion(editor);
             return true;
@@ -23144,6 +23220,114 @@ function openMarks(usfm, markStack, toOpen) {
     return { usfm: usfm, stack: markStack };
 }
 
+;// CONCATENATED MODULE: ./src/components/SelectionContextMenu.tsx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const SelectionContextMenu = ({ open, handleClose, }) => {
+    const editor = useSlate();
+    const [anchorEl, setAnchorEl] = react.useState(null);
+    react.useEffect(() => {
+        if (!open || !editor.selection || Range.isCollapsed(editor.selection)) {
+            setAnchorEl(null);
+            return;
+        }
+        // Get the DOM range for positioning the menu
+        const domSelection = window.getSelection();
+        if (domSelection && domSelection.rangeCount > 0) {
+            const domRange = domSelection.getRangeAt(0);
+            const rect = domRange.getBoundingClientRect();
+            // Create a temporary element at the selection position for anchoring
+            const tempEl = document.createElement("div");
+            tempEl.style.position = "absolute";
+            tempEl.style.left = `${rect.left}px`;
+            tempEl.style.top = `${rect.bottom}px`;
+            document.body.appendChild(tempEl);
+            setAnchorEl(tempEl);
+            return () => {
+                document.body.removeChild(tempEl);
+            };
+        }
+    }, [open, editor.selection]);
+    const handleAddVerse = () => {
+        if (!editor.selection)
+            return;
+        // Get the start of the selection
+        const selectionStart = Range.isBackward(editor.selection)
+            ? editor.selection.focus
+            : editor.selection.anchor;
+        // Find the verse node at the selection start
+        const verseEntry = MyEditor.getVerseNode(editor, selectionStart.path);
+        if (!verseEntry)
+            return;
+        const [verse, versePath] = verseEntry;
+        const verseNumberOrRange = index_es_Node.string(verse.children[0]);
+        const [rangeStart, rangeEnd] = verseNumberOrRange.split("-");
+        // Log the verse text, and the text before/after the selection start
+        const inlineContainerPath = versePath.concat(1);
+        const [inlineContainer] = Editor.node(editor, inlineContainerPath);
+        const fullVerseText = index_es_Node.string(inlineContainer);
+        const verseStartPoint = Editor.start(editor, inlineContainerPath);
+        const preRange = Editor.range(editor, verseStartPoint, selectionStart);
+        // Calculate the new verse number
+        const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart);
+        const newVerseNum = currentVerseNum + 1;
+        // Split at the selection point, targeting the verse node
+        Transforms.splitNodes(editor, {
+            at: selectionStart,
+            match: (n) => Element.isElement(n) && n.type === utils_NodeTypes.VERSE,
+        });
+        // After the split, replace the verse number of the new verse
+        const newVersePath = Path.next(versePath);
+        const newVerseNumPath = newVersePath.concat(0);
+        // Remove the old verse number node and insert a new one
+        MyTransforms.replaceNodes(editor, newVerseNumPath, verseNumber(newVerseNum.toString()));
+        // Move the text after the selection into the new verse's inline container,
+        // and keep only the text before the selection in the original verse's inline container
+        const originalInlineContainerPath = versePath.concat(1);
+        const newInlineContainerPath = newVersePath.concat(1);
+        // Reset both inline containers to empty, then insert the appropriate text
+        const textBeforeSelectionStart = Editor.string(editor, preRange);
+        const textAfterSelectionStart = fullVerseText.slice(textBeforeSelectionStart.length);
+        MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer());
+        MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer());
+        MyTransforms.replaceText(editor, originalInlineContainerPath.concat(0), textBeforeSelectionStart);
+        MyTransforms.replaceText(editor, newInlineContainerPath.concat(0), textAfterSelectionStart);
+        // Move cursor to the start of the new verse content
+        Transforms.select(editor, Editor.start(editor, newInlineContainerPath));
+        handleClose();
+        ReactEditor.focus(editor);
+    };
+    if (!anchorEl || !open)
+        return null;
+    return (react.createElement(esm_Popper_Popper, { anchorEl: anchorEl, open: open, placement: "bottom-start", modifiers: {
+            flip: { enabled: true },
+            preventOverflow: {
+                enabled: true,
+                boundariesElement: "viewport",
+            },
+        } },
+        react.createElement(ClickAwayListener_ClickAwayListener, { onClickAway: handleClose },
+            react.createElement(Paper_Paper, null,
+                react.createElement(MenuList_MenuList, null,
+                    react.createElement(MenuItem_MenuItem, { onClick: handleAddVerse },
+                        react.createElement(ListItemIcon_ListItemIcon, null,
+                            react.createElement(Add/* default */.Z, { fontSize: "small" })),
+                        react.createElement(ListItemText_ListItemText, { primary: "Add Verse Marker" })))))));
+};
+
 ;// CONCATENATED MODULE: ./src/components/BasicUsfmEditor.tsx
 var BasicUsfmEditor_rest = (undefined && undefined.__rest) || function (s, e) {
     var t = {};
@@ -23156,6 +23340,7 @@ var BasicUsfmEditor_rest = (undefined && undefined.__rest) || function (s, e) {
         }
     return t;
 };
+
 
 
 
@@ -23251,8 +23436,23 @@ class BasicUsfmEditor extends react.Component {
         this.handleChange = (value) => {
             console.debug("after change", value);
             this.fixSelectionOnChapterOrVerseNumber();
-            this.setState({ value: value });
+            this.setState({ value: value }, () => {
+                // Update selection menu state after state update
+                this.updateSelectionMenuState();
+            });
             this.scheduleOnChange(value);
+        };
+        this.updateSelectionMenuState = () => {
+            const selection = this.slateEditor.selection;
+            const hasExpandedSelection = !!selection && !Range.isCollapsed(selection);
+            // Only show menu if there's an expanded selection in an editable area
+            const shouldShow = hasExpandedSelection && !this.props.readOnly;
+            if (this.state.showSelectionMenu !== shouldShow) {
+                this.setState({ showSelectionMenu: shouldShow });
+            }
+        };
+        this.handleCloseSelectionMenu = () => {
+            this.setState({ showSelectionMenu: false });
         };
         this.scheduleOnChange = (0,lodash.debounce)((newValue) => {
             if (this.props.onChange) {
@@ -23271,6 +23471,14 @@ class BasicUsfmEditor extends react.Component {
                 return;
             }
             handleKeyPress(event, this.slateEditor);
+        };
+        this.onMouseUp = () => {
+            // Check for selection when mouse is released (after potential drag select)
+            setTimeout(() => this.updateSelectionMenuState(), 0);
+        };
+        this.onKeyUp = () => {
+            // Check for selection after keyboard navigation (e.g., Shift+Arrow keys)
+            setTimeout(() => this.updateSelectionMenuState(), 0);
         };
         this.decorate = (entry) => {
             return decorateWithSuggestion(this.slateEditor, entry);
@@ -23333,6 +23541,7 @@ class BasicUsfmEditor extends react.Component {
             value: usfmToSlate(props.usfmString),
             selectedVerse: undefined,
             prevUsfmStringProp: props.usfmString,
+            showSelectionMenu: false,
         };
         this.slateEditor = (0,lodash.flowRight)(withBackspace, withDelete, withEnter, withVerseShortcut, withInlineSuggestion, withNormalize, withReact, createEditor)();
         this.slateEditor.isInline = () => false;
@@ -23345,6 +23554,7 @@ class BasicUsfmEditor extends react.Component {
         return {
             value: usfmToSlate(props.usfmString),
             prevUsfmStringProp: props.usfmString,
+            showSelectionMenu: false,
         };
     }
     fixSelectionOnChapterOrVerseNumber() {
@@ -23433,7 +23643,8 @@ class BasicUsfmEditor extends react.Component {
             Transforms.deselect(this.slateEditor);
         }
         return (react.createElement(Slate, { editor: this.slateEditor, value: this.state.value, onChange: this.handleChange },
-            react.createElement(Editable, { readOnly: this.props.readOnly, renderElement: renderElementByType, renderLeaf: renderLeafByProps, decorate: this.decorate, spellCheck: false, onKeyDown: this.onKeyDown, className: "usfm-editor" })));
+            react.createElement(Editable, { readOnly: this.props.readOnly, renderElement: renderElementByType, renderLeaf: renderLeafByProps, decorate: this.decorate, spellCheck: false, onKeyDown: this.onKeyDown, onKeyUp: this.onKeyUp, onMouseUp: this.onMouseUp, className: "usfm-editor" }),
+            react.createElement(SelectionContextMenu, { open: this.state.showSelectionMenu, handleClose: this.handleCloseSelectionMenu })));
     }
 }
 BasicUsfmEditor.propTypes = usfmEditorPropTypes;
@@ -27280,7 +27491,7 @@ const _jsxFileName = "";
 
 
 const __examples = [{
-  'content': 'const usfmString = `\n\\\\id GEN\n\\\\c 1\n\\\\p\n\\\\v 1 the first verse of chapter one.\n\\\\v 2 the second verse of chapter one.\n\\\\c 2\n\\\\p\n\\\\v 1 the first verse of chapter two\n\\\\v 2 the second verse of chapter two\n\\\\c 11\n\\\\p\n\\\\v 1 the first verse of chapter 11\n\\\\v 2 the second verse of chapter 11\n\\\\c 12\n\\\\p\n\\\\v 1 the first verse of chapter 12\n\\\\v 2 the second verse of chapter 12\n`\n\nimport * as React from "react"\nimport "../style.css"\nimport "./demo.css"\nimport { OutputUsfm } from "./UsfmContainer"\n\n// The following object should be imported from the "usfm-editor" module like this:\n// import { UsfmEditor } from "usfm-editor"\nimport { UsfmEditor } from "../index"\n\nclass Demo extends React.Component {\n    constructor(props) {\n        super(props)\n        this.handleEditorChange = this.handleEditorChange.bind(this)\n        this.state = { usfmOutput: usfmString }\n    }\n\n    handleEditorChange(usfm) {\n        this.setState({ usfmOutput: usfm })\n    }\n\n    render() {\n        return (\n            <div className="row">\n                <div className="column column-left">\n                    <h3>Select Chapter</h3>\n\n                    {/* The editor can be given a ref of type UsfmEditorRef\n                     to have access to the editor API (use React.createRef<UsfmEditorRef>)\n                    */}\n                    <UsfmEditor\n                        usfmString={usfmString}\n                        onChange={this.handleEditorChange}\n                    />\n                </div>\n                <div className="column column-right">\n                    <OutputUsfm usfm={this.state.usfmOutput} />\n                </div>\n            </div>\n        )\n    }\n}\n\n;<Demo />',
+  'content': 'const usfmString = `\n\\\\id GEN\n\\\\c 1\n\\\\p\n\\\\v 1 the first verse of chapter one.\n\\\\v 2 the second verse of chapter one.\n\\\\c 2\n\\\\p\n\\\\v 1 the first verse of chapter two\n\\\\v 2 the second verse of chapter two\n\\\\c 11\n\\\\p\n\\\\v 1 the first verse of chapter 11\n\\\\v 2 the second verse of chapter 11\n\\\\c 12\n\\\\p\n\\\\v 1 the first verse of chapter 12\n\\\\v 2 the second verse of chapter 12\n`\n\nimport * as React from "react"\nimport "../style.css"\nimport "./demo.css"\nimport { OutputUsfm } from "./UsfmContainer"\n\n// The following object should be imported from the "usfm-editor" module like this:\n// import { UsfmEditor } from "usfm-editor"\nimport { UsfmEditor } from "../index"\n\nclass Demo extends React.Component {\n    constructor(props) {\n        super(props)\n        this.handleEditorChange = this.handleEditorChange.bind(this)\n        this.state = { usfmOutput: usfmString }\n    }\n\n    handleEditorChange(usfm) {\n        this.setState({ usfmOutput: usfm })\n    }\n\n    render() {\n        return (\n            <div className="row">\n                <div className="column column-left" style={{display: \'flex\', flexDirection: \'column\', justifyContent: \'space-between\' }}>\n                    <h3>Select Chapter</h3>\n\n                    {/* The editor can be given a ref of type UsfmEditorRef\n                     to have access to the editor API (use React.createRef<UsfmEditorRef>)\n                    */}\n                    <UsfmEditor\n                        usfmString={usfmString}\n                        onChange={this.handleEditorChange}\n                    />\n                    <div style={{ height: "12rem" }} />\n                    <hr/>\n                    <h5>You can type \\\\v {"{"} number {"}"} or type \\ and press Tab to accept the suggestion</h5>\n                    <h5>You can highlight a word or a few words to add verse marker. Don\'t select across verse boundary</h5>\n                </div>\n                <div className="column column-right">\n                    <OutputUsfm usfm={this.state.usfmOutput} />\n                </div>\n            </div>\n        )\n    }\n}\n\n;<Demo />',
   'lang': 'jsx',
   'settings': {
     'index': 0
@@ -27354,7 +27565,7 @@ class Demo extends React.Component {
     render() {
         return (
             <div className="row">
-                <div className="column column-left">
+                <div className="column column-left" style={{display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <h3>Select Chapter</h3>
 
                     {/* The editor can be given a ref of type UsfmEditorRef
@@ -27364,6 +27575,10 @@ class Demo extends React.Component {
                         usfmString={usfmString}
                         onChange={this.handleEditorChange}
                     />
+                    <div style={{ height: "12rem" }} />
+                    <hr/>
+                    <h5>You can type \\\\v {"{"} number {"}"} or type \\ and press Tab to accept the suggestion</h5>
+                    <h5>You can highlight a word or a few words to add verse marker. Don't select across verse boundary</h5>
                 </div>
                 <div className="column column-right">
                     <OutputUsfm usfm={this.state.usfmOutput} />
@@ -27411,7 +27626,7 @@ module.exports = {
     'patterns': void 0,
     'sections': [{
             'name': 'Full-Featured Editor',
-            'content': __webpack_require__(60484),
+            'content': __webpack_require__(57935),
             'exampleMode': 'hide',
             'usageMode': 'hide',
             'sectionDepth': 0,

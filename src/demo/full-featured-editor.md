@@ -42,7 +42,7 @@ class Demo extends React.Component {
     render() {
         return (
             <div className="row">
-                <div className="column column-left">
+                <div className="column column-left" style={{display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <h3>Select Chapter</h3>
 
                     {/* The editor can be given a ref of type UsfmEditorRef
@@ -52,6 +52,10 @@ class Demo extends React.Component {
                         usfmString={usfmString}
                         onChange={this.handleEditorChange}
                     />
+                    <div style={{ height: "12rem" }} />
+                    <hr/>
+                    <h5>You can type \\v {"{"} number {"}"} or type \ and press Tab to accept the suggestion</h5>
+                    <h5>You can highlight a word or a few words to add verse marker. Don't select across verse boundary</h5>
                 </div>
                 <div className="column column-right">
                     <OutputUsfm usfm={this.state.usfmOutput} />
