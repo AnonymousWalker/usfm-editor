@@ -64,14 +64,66 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                     // Check if there's a previous verse to merge into
                     const prevVerse = MyEditor.getPreviousVerse(editor, versePath)
                     if (prevVerse) {
+                        // Capture the length of the previous verse's text before merging
+                        const prevVersePath = prevVerse[1]
+                        const prevInlineContainerPath = prevVersePath.concat(1)
+                        let prevTextLength = 0
+                        try {
+                            const [prevInlineContainer] = Editor.node(
+                                editor,
+                                prevInlineContainerPath
+                            )
+                            prevTextLength = Node.string(prevInlineContainer).length
+                        } catch (_) {
+                            prevTextLength = 0
+                        }
+
                         // Use the existing transform to remove verse and concatenate
                         VerseTransforms.removeVerseAndConcatenateContentsWithPrevious(
                             editor,
                             verseNumPath
                         )
+                        // After merge, place cursor at the offset equal to the previous text length
+                        try {
+                            // Start at the beginning of the previous inline container
+                            Transforms.select(
+                                editor,
+                                Editor.start(editor, prevInlineContainerPath)
+                            )
+                            if (prevTextLength > 0) {
+                                Transforms.move(editor, {
+                                    distance: prevTextLength,
+                                    unit: "offset",
+                                })
+                            }
+                        } catch (e) {
+                            // Fallbacks if structure differs unexpectedly
+                            try {
+                                Transforms.select(
+                                    editor,
+                                    Editor.end(editor, prevInlineContainerPath)
+                                )
+                            } catch (_) {
+                                Transforms.select(
+                                    editor,
+                                    Editor.end(editor, prevVersePath)
+                                )
+                            }
+                        }
                     } else {
                         // If no previous verse, just remove the verse number
                         Transforms.removeNodes(editor, { at: verseNumPath })
+                        // Keep cursor at the start of the verse contents (now at index 0)
+                        const inlineContainerPath = versePath.concat(0)
+                        try {
+                            Transforms.select(
+                                editor,
+                                Editor.start(editor, inlineContainerPath)
+                            )
+                        } catch (e) {
+                            // Fall back to start of the verse node
+                            Transforms.select(editor, Editor.start(editor, versePath))
+                        }
                     }
                 }
                 return
