@@ -167,7 +167,7 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                         
                         if (numberMatch) {
                             verseNumber = numberMatch[2]
-                            matchLength = numberMatch[0].length
+                            matchLength = numberMatch[0].length - 1 // don't include the prefix space
                         }
                     }
                     
