@@ -55,7 +55,7 @@ class Demo extends React.Component {
                     <div style={{ height: "12rem" }} />
                     <hr/>
                     <h5>Please don't delete verse 1</h5>
-                    <h5>You can type \\v {"{"} number {"}"} or type \ and press Tab to accept the suggestion</h5>
+                    <h5>You can type \v {"{"} number {"}"} or type \ and press Tab to accept the suggestion</h5>
                     <h5>You can highlight a word or a few words to add verse marker. Don't select across verse boundary</h5>
                 </div>
                 <div className="column column-right">
