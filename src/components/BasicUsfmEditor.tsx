@@ -196,8 +196,8 @@ export class BasicUsfmEditor
         console.debug("after change", value)
         this.fixSelectionOnChapterOrVerseNumber()
         this.setState({ value: value }, () => {
-            // Update selection menu state after state update
-            this.updateSelectionMenuState()
+            // Note: Selection menu state is updated in onMouseUp and onKeyUp
+            // to avoid showing menu while dragging
         })
         this.scheduleOnChange(value)
     }
