@@ -52,13 +52,15 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         }
     }, [open, editor.selection])
 
-    const handleAddVerse = () => {
-        if (!editor.selection) return
+    const addVerseAtSelection = (selection: Range) => {
+        if (!selection) return
 
         // Get the start of the selection
-        const selectionStart = Range.isBackward(editor.selection)
-            ? editor.selection.focus
-            : editor.selection.anchor
+        const selectionStart = Range.isBackward(selection)
+            ? selection.focus
+            : selection.anchor
+
+        console.log("selection start", selectionStart)
 
         // Find the verse node and container information
         const verseInfo = getVerseAndContainerInfo(editor, selectionStart)
@@ -93,6 +95,30 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         ReactEditor.focus(editor)
     }
 
+    const handleAddVerse = () => {
+        if (!editor.selection) return
+        addVerseAtSelection(editor.selection)
+    }
+
+    const handleAutoFillMarkers = () => {
+        if (!editor.selection) return
+        
+        // Create a new selection with offset set to 0
+        const modifiedSelection = {
+            ...editor.selection,
+            anchor: {
+                ...editor.selection.anchor,
+                offset: 0
+            },
+            focus: {
+                ...editor.selection.focus,
+                offset: 0
+            }
+        }
+        
+        addVerseAtSelection(modifiedSelection)
+    }
+
     // Helper function to get verse and container information
     const getVerseAndContainerInfo = (editor: Editor, selectionStart: Point) => {
         const verseEntry = MyEditor.getVerseNode(editor, selectionStart.path)
@@ -100,7 +126,15 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
 
         const [verse, versePath] = verseEntry
         
-        // Find which child of the verse contains the selection
+
+    const getMarkersAtSelection = (selection: Range) => {
+        if (!selection) return
+        const selectionStart = Range.isBackward(selection)
+            ? selection.focus
+            : selection.anchor
+        console.log("selection start", selectionStart)
+    }
+
         let containerIndex = -1
         let containerPath: Path | null = null
         
@@ -218,6 +252,12 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
                                 <AddIcon fontSize="small" />
                             </ListItemIcon>
                             <ListItemText primary="Add Verse Marker" />
+                        </MenuItem>
+                        <MenuItem onClick={handleAutoFillMarkers}>
+                            <ListItemIcon>
+                                <AddIcon fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Suggest Markers" />
                         </MenuItem>
                     </MenuList>
                 </Paper>
