@@ -74,6 +74,9 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         // Prepare content for the new verse
         const contentForNewVerse = getContentForNewVerse(containerIndex, textBeforeSelection, textAfterSelection, containerText)
 
+        // Handle the original container content BEFORE splitting
+        handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection)
+
         // Split the verse node at the selection point
         Transforms.splitNodes(editor, {
             at: selectionStart,
@@ -82,9 +85,6 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
 
         // Update the new verse number and content
         updateNewVerseContent(editor, versePath, newVerseNum, contentForNewVerse)
-
-        // Handle the original container content
-        handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection)
 
         // Move cursor to the start of the new verse content
         const newVersePath = Path.next(versePath)
