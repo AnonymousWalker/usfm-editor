@@ -125,6 +125,8 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
             const startIndex = isAscending ? anchorThirdIndex : focusThirdIndex
             const endIndex = isAscending ? focusThirdIndex : anchorThirdIndex
             
+            const positionsToAdd = []
+
             // Generate selections for each increment
             for (let i = startIndex; i <= endIndex; i++) {
                 const modifiedSelection = {
@@ -140,11 +142,17 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
                         offset: 0
                     }
                 }
-                addVerseAtSelection(modifiedSelection)
+                positionsToAdd.push(modifiedSelection)
             }
+            
+            // Call addVerseAtSelection for each position
+            positionsToAdd.forEach(selection => {
+                addVerseAtSelection(selection)
+            })
+            
             console.log(`Added ${paragraphBreaks} markers`)
         }        
-
+        
         handleClose()
         ReactEditor.focus(editor)
     }
