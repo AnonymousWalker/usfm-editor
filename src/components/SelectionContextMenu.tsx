@@ -90,33 +90,63 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         const newVersePath = Path.next(versePath)
         const newInlineContainerPath = newVersePath.concat(1)
         Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
-
-        handleClose()
-        ReactEditor.focus(editor)
     }
 
     const handleAddVerse = () => {
         if (!editor.selection) return
         addVerseAtSelection(editor.selection)
+
+        handleClose()
+        ReactEditor.focus(editor)
+
     }
 
     const handleAutoFillMarkers = () => {
         if (!editor.selection) return
         
-        // Create a new selection with offset set to 0
-        const modifiedSelection = {
-            ...editor.selection,
-            anchor: {
-                ...editor.selection.anchor,
-                offset: 0
-            },
-            focus: {
-                ...editor.selection.focus,
-                offset: 0
-            }
-        }
+        // Calculate paragraph breaks based on the difference in the third index of anchor and focus paths
+        const anchorPath = editor.selection.anchor.path
+        const focusPath = editor.selection.focus.path
         
-        addVerseAtSelection(modifiedSelection)
+        console.log("anchor path:", anchorPath)
+        console.log("focus path:", focusPath)
+        
+        // Check if both paths have at least 3 elements (third index is index 2)
+        if (anchorPath.length >= 3 && focusPath.length >= 3) {
+            const anchorThirdIndex = anchorPath[2]
+            const focusThirdIndex = focusPath[2]
+            const paragraphBreaks = Math.abs(anchorThirdIndex - focusThirdIndex)
+            
+            console.log(`Third index - Anchor: ${anchorThirdIndex}, Focus: ${focusThirdIndex}`)
+            console.log(`Paragraph breaks: ${paragraphBreaks}`)
+            
+            // Determine the direction (ascending or descending)
+            const isAscending = focusThirdIndex > anchorThirdIndex
+            const startIndex = isAscending ? anchorThirdIndex : focusThirdIndex
+            const endIndex = isAscending ? focusThirdIndex : anchorThirdIndex
+            
+            // Generate selections for each increment
+            for (let i = startIndex; i <= endIndex; i++) {
+                const modifiedSelection = {
+                    ...editor.selection,
+                    anchor: {
+                        ...editor.selection.anchor,
+                        path: [...anchorPath.slice(0, 2), i, ...anchorPath.slice(3)],
+                        offset: 0
+                    },
+                    focus: {
+                        ...editor.selection.focus,
+                        path: [...focusPath.slice(0, 2), i, ...focusPath.slice(3)],
+                        offset: 0
+                    }
+                }
+                addVerseAtSelection(modifiedSelection)
+            }
+            console.log(`Added ${paragraphBreaks} markers`)
+        }        
+
+        handleClose()
+        ReactEditor.focus(editor)
     }
 
     // Helper function to get verse and container information
