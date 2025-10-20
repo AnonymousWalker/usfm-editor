@@ -68,12 +68,32 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         const verseNumberOrRange = Node.string(verse.children[0])
         const [rangeStart, rangeEnd] = verseNumberOrRange.split("-")
         
-        // Log the verse text, and the text before/after the selection start
-        const inlineContainerPath = versePath.concat(1)
-        const [inlineContainer] = Editor.node(editor, inlineContainerPath)
-        const fullVerseText = Node.string(inlineContainer)
-        const verseStartPoint = Editor.start(editor, inlineContainerPath)
-        const preRange = Editor.range(editor, verseStartPoint, selectionStart)
+        // Find which child of the verse contains the selection
+        let selectionContainerIndex = -1
+        let selectionContainerPath: Path | null = null
+        
+        // Check each child of the verse to find which one contains the selection
+        for (let i = 1; i < verse.children.length; i++) {
+            const childPath = versePath.concat(i)
+            
+            // Check if the selection path is a descendant of this child path
+            if (Path.isDescendant(selectionStart.path, childPath) || Path.equals(selectionStart.path, childPath)) {
+                selectionContainerIndex = i
+                selectionContainerPath = childPath
+                break
+            }
+        }
+        
+        if (selectionContainerPath === null) {
+            console.error("Could not find container for selection within verse")
+            return
+        }
+        
+        const [selectionContainer] = Editor.node(editor, selectionContainerPath)
+        const containerText = Node.string(selectionContainer)
+        
+        const containerStartPoint = Editor.start(editor, selectionContainerPath)
+        const preRange = Editor.range(editor, containerStartPoint, selectionStart)
 
         // Calculate the new verse number
         const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart)
@@ -93,28 +113,53 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         MyTransforms.replaceNodes(editor, newVerseNumPath, verseNumber(newVerseNum.toString()))
 
         // Move the text after the selection into the new verse's inline container,
-        // and keep only the text before the selection in the original verse's inline container
-        const originalInlineContainerPath = versePath.concat(1)
+        // and keep only the text before the selection in the original container
+        const originalContainerPath = versePath.concat(selectionContainerIndex)
         const newInlineContainerPath = newVersePath.concat(1)
 
-        // Reset both inline containers to empty, then insert the appropriate text
+        // Get the text content
         const textBeforeSelectionStart = Editor.string(editor, preRange)
-        const textAfterSelectionStart = fullVerseText.slice(
+        const textAfterSelectionStart = containerText.slice(
             textBeforeSelectionStart.length
         )
         
-        MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer())
-        MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
-        MyTransforms.replaceText(
-            editor,
-            originalInlineContainerPath.concat(0),
-            textBeforeSelectionStart
-        )
-        MyTransforms.replaceText(
-            editor,
-            newInlineContainerPath.concat(0),
-            textAfterSelectionStart
-        )
+        // Handle different container types
+        if (selectionContainerIndex === 1) {
+            // Selection is in the inline container - use the original logic
+            MyTransforms.replaceNodes(editor, originalContainerPath, emptyInlineContainer())
+            MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
+            MyTransforms.replaceText(
+                editor,
+                originalContainerPath.concat(0),
+                textBeforeSelectionStart
+            )
+            MyTransforms.replaceText(
+                editor,
+                newInlineContainerPath.concat(0),
+                textAfterSelectionStart
+            )
+        } else {
+            // Selection is in a paragraph or other element - need to handle differently
+            // Keep the text before selection in the original paragraph
+            MyTransforms.replaceText(
+                editor,
+                selectionContainerPath.concat(0),
+                textBeforeSelectionStart
+            )
+            
+            // Put the text after selection in the new verse's inline container
+            MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
+            MyTransforms.replaceText(
+                editor,
+                newInlineContainerPath.concat(0),
+                textAfterSelectionStart
+            )
+            
+            // Remove the original paragraph if it's now empty (no text before selection)
+            if (textBeforeSelectionStart.trim() === "") {
+                Transforms.removeNodes(editor, { at: originalContainerPath })
+            }
+        }
 
         // Move cursor to the start of the new verse content
         Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
