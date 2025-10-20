@@ -10,7 +10,7 @@ import Paper from "@material-ui/core/Paper"
 import ListItemIcon from "@material-ui/core/ListItemIcon"
 import ListItemText from "@material-ui/core/ListItemText"
 import AddIcon from "@material-ui/icons/Add"
-import { Range, Editor, Path, Node, Element, Transforms } from "slate"
+import { Range, Editor, Path, Node, Element, Transforms, Point } from "slate"
 import NodeTypes from "../utils/NodeTypes"
 import { verseNumber, emptyInlineContainer } from "../transforms/basicSlateNodeFactory"
 
@@ -60,67 +60,139 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
             ? editor.selection.focus
             : editor.selection.anchor
 
-        // Find the verse node at the selection start
-        const verseEntry = MyEditor.getVerseNode(editor, selectionStart.path)
-        if (!verseEntry) return
+        // Find the verse node and container information
+        const verseInfo = getVerseAndContainerInfo(editor, selectionStart)
+        if (!verseInfo) return
 
-        const [verse, versePath] = verseEntry
-        const verseNumberOrRange = Node.string(verse.children[0])
-        const [rangeStart, rangeEnd] = verseNumberOrRange.split("-")
-        
-        // Log the verse text, and the text before/after the selection start
-        const inlineContainerPath = versePath.concat(1)
-        const [inlineContainer] = Editor.node(editor, inlineContainerPath)
-        const fullVerseText = Node.string(inlineContainer)
-        const verseStartPoint = Editor.start(editor, inlineContainerPath)
-        const preRange = Editor.range(editor, verseStartPoint, selectionStart)
+        const { verse, versePath, containerIndex, containerPath, containerText, textBeforeSelection, textAfterSelection } = verseInfo
 
         // Calculate the new verse number
-        const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart)
-        const newVerseNum = currentVerseNum + 1
+        const newVerseNum = getNextVerseNumber(verse.children[0])
 
-        // Split at the selection point, targeting the verse node
+        // Prepare content for the new verse
+        const contentForNewVerse = getContentForNewVerse(containerIndex, textBeforeSelection, textAfterSelection, containerText)
+
+        // Split the verse node at the selection point
         Transforms.splitNodes(editor, {
             at: selectionStart,
             match: (n) => Element.isElement(n) && n.type === NodeTypes.VERSE,
         })
 
-        // After the split, replace the verse number of the new verse
-        const newVersePath = Path.next(versePath)
-        const newVerseNumPath = newVersePath.concat(0)
-        
-        // Remove the old verse number node and insert a new one
-        MyTransforms.replaceNodes(editor, newVerseNumPath, verseNumber(newVerseNum.toString()))
+        // Update the new verse number and content
+        updateNewVerseContent(editor, versePath, newVerseNum, contentForNewVerse)
 
-        // Move the text after the selection into the new verse's inline container,
-        // and keep only the text before the selection in the original verse's inline container
-        const originalInlineContainerPath = versePath.concat(1)
-        const newInlineContainerPath = newVersePath.concat(1)
-
-        // Reset both inline containers to empty, then insert the appropriate text
-        const textBeforeSelectionStart = Editor.string(editor, preRange)
-        const textAfterSelectionStart = fullVerseText.slice(
-            textBeforeSelectionStart.length
-        )
-        
-        MyTransforms.replaceNodes(editor, originalInlineContainerPath, emptyInlineContainer())
-        MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
-        MyTransforms.replaceText(
-            editor,
-            originalInlineContainerPath.concat(0),
-            textBeforeSelectionStart
-        )
-        MyTransforms.replaceText(
-            editor,
-            newInlineContainerPath.concat(0),
-            textAfterSelectionStart
-        )
+        // Handle the original container content
+        handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection)
 
         // Move cursor to the start of the new verse content
+        const newVersePath = Path.next(versePath)
+        const newInlineContainerPath = newVersePath.concat(1)
         Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
 
         handleClose()
         ReactEditor.focus(editor)
+    }
+
+    // Helper function to get verse and container information
+    const getVerseAndContainerInfo = (editor: Editor, selectionStart: Point) => {
+        const verseEntry = MyEditor.getVerseNode(editor, selectionStart.path)
+        if (!verseEntry) return null
+
+        const [verse, versePath] = verseEntry
+        
+        // Find which child of the verse contains the selection
+        let containerIndex = -1
+        let containerPath: Path | null = null
+        
+        for (let i = 1; i < verse.children.length; i++) {
+            const childPath = versePath.concat(i)
+            
+            if (Path.isDescendant(selectionStart.path, childPath) || Path.equals(selectionStart.path, childPath)) {
+                containerIndex = i
+                containerPath = childPath
+                break
+            }
+        }
+        
+        if (containerPath === null) {
+            console.error("Could not find container for selection within verse")
+            return null
+        }
+        
+        const [container] = Editor.node(editor, containerPath)
+        const containerText = Node.string(container)
+        
+        const containerStartPoint = Editor.start(editor, containerPath)
+        const preRange = Editor.range(editor, containerStartPoint, selectionStart)
+        const textBeforeSelection = Editor.string(editor, preRange)
+        const textAfterSelection = containerText.slice(textBeforeSelection.length)
+
+        return {
+            verse,
+            versePath,
+            containerIndex,
+            containerPath,
+            containerText,
+            textBeforeSelection,
+            textAfterSelection
+        }
+    }
+
+    // Helper function to calculate the next verse number
+    const getNextVerseNumber = (verseNumberNode: Node): number => {
+        const verseNumberOrRange = Node.string(verseNumberNode)
+        const [rangeStart, rangeEnd] = verseNumberOrRange.split("-")
+        const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart)
+        return currentVerseNum + 1
+    }
+
+    // Helper function to determine content for the new verse
+    const getContentForNewVerse = (containerIndex: number, textBeforeSelection: string, textAfterSelection: string, containerText: string): string => {
+        if (containerIndex === 1) {
+            // Selection is in inline container - use text after selection
+            return textAfterSelection
+        } else {
+            // Selection is in paragraph or other element
+            if (textBeforeSelection.trim() === "") {
+                // Selection is at the beginning - move entire paragraph content
+                return containerText
+            } else {
+                // Selection is in middle/end - move text after selection
+                return textAfterSelection
+            }
+        }
+    }
+
+    // Helper function to update the new verse content
+    const updateNewVerseContent = (editor: Editor, versePath: Path, newVerseNum: number, contentForNewVerse: string) => {
+        const newVersePath = Path.next(versePath)
+        const newVerseNumPath = newVersePath.concat(0)
+        const newInlineContainerPath = newVersePath.concat(1)
+        
+        // Update verse number
+        MyTransforms.replaceNodes(editor, newVerseNumPath, verseNumber(newVerseNum.toString()))
+        
+        // Update content
+        MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
+        MyTransforms.replaceText(editor, newInlineContainerPath.concat(0), contentForNewVerse)
+    }
+
+    // Helper function to handle the original container content
+    const handleOriginalContainerContent = (editor: Editor, containerPath: Path, containerIndex: number, textBeforeSelection: string) => {
+        if (containerIndex === 1) {
+            // Selection was in inline container - update with text before selection
+            MyTransforms.replaceNodes(editor, containerPath, emptyInlineContainer())
+            MyTransforms.replaceText(editor, containerPath.concat(0), textBeforeSelection)
+        } else {
+            // Selection was in paragraph or other element
+            if (textBeforeSelection.trim() === "") {
+                // Remove the paragraph since all content moved to new verse
+                Transforms.removeNodes(editor, { at: containerPath })
+            } else {
+                // Keep the text before selection in the original paragraph
+                MyTransforms.replaceText(editor, containerPath.concat(0), textBeforeSelection)
+            }
+        }
     }
 
     if (!anchorEl || !open) return null
