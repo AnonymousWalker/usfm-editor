@@ -72,3 +72,4 @@ yarn.lock
 
 # MacBook Desktop Services Store files
 .DS_Store
+/.vscode
