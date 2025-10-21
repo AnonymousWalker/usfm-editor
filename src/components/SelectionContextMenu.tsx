@@ -72,19 +72,19 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         const newVerseNum = getNextVerseNumber(verse.children[0])
 
         // Prepare content for the new verse
-        const contentForNewVerse = getContentForNewVerse(containerIndex, textBeforeSelection, textAfterSelection, containerText)
+        const contentForNewVerse = getContentForNewVerse(editor, verse, versePath, containerIndex, textBeforeSelection, textAfterSelection, containerText)
 
-        // Handle the original container content BEFORE splitting
-        handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection)
-
-        // Split the verse node at the selection point
+        // Split the verse node at the selection point FIRST
         Transforms.splitNodes(editor, {
             at: selectionStart,
             match: (n) => Element.isElement(n) && n.type === NodeTypes.VERSE,
         })
 
-        // Update the new verse number and content
+        // Update the new verse number and content (using the original versePath since splitNodes creates the new verse at Path.next(versePath))
         updateNewVerseContent(editor, versePath, newVerseNum, contentForNewVerse)
+
+        // Handle the original container content AFTER splitting and updating
+        handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection, verse, versePath)
 
         // Move cursor to the start of the new verse content
         const newVersePath = Path.next(versePath)
@@ -163,15 +163,6 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         if (!verseEntry) return null
 
         const [verse, versePath] = verseEntry
-        
-
-    const getMarkersAtSelection = (selection: Range) => {
-        if (!selection) return
-        const selectionStart = Range.isBackward(selection)
-            ? selection.focus
-            : selection.anchor
-        console.log("selection start", selectionStart)
-    }
 
         let containerIndex = -1
         let containerPath: Path | null = null
@@ -218,19 +209,62 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         return currentVerseNum + 1
     }
 
+    // Helper function to collect all content from a container to the end of the verse
+    const getAllContentFromContainerToEndOfVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number): string => {
+        let allContent = ""
+        
+        // Start from the current container and collect all subsequent containers
+        for (let i = containerIndex; i < verse.children.length; i++) {
+            const containerPath = versePath.concat(i)
+            const [container] = Editor.node(editor, containerPath)
+            const containerText = Node.string(container)
+            
+            if (i === containerIndex) {
+                // For the first container, use its full text
+                allContent += containerText
+            } else {
+                // For subsequent containers, add a space before the text if it's not empty
+                if (containerText.trim() !== "") {
+                    allContent += " " + containerText
+                }
+            }
+        }
+        
+        return allContent
+    }
+
+    // Helper function to collect all content from the next containers to the end of the verse
+    const getAllContentFromNextContainersToEndOfVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number): string => {
+        let allContent = ""
+        
+        // Start from the next container and collect all subsequent containers
+        for (let i = containerIndex + 1; i < verse.children.length; i++) {
+            const containerPath = versePath.concat(i)
+            const [container] = Editor.node(editor, containerPath)
+            const containerText = Node.string(container)
+            
+            // Add a space before the text if it's not empty
+            if (containerText.trim() !== "") {
+                allContent += " " + containerText
+            }
+        }
+        
+        return allContent
+    }
+
     // Helper function to determine content for the new verse
-    const getContentForNewVerse = (containerIndex: number, textBeforeSelection: string, textAfterSelection: string, containerText: string): string => {
+    const getContentForNewVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number, textBeforeSelection: string, textAfterSelection: string, containerText: string): string => {
         if (containerIndex === 1) {
             // Selection is in inline container - use text after selection
             return textAfterSelection
         } else {
             // Selection is in paragraph or other element
             if (textBeforeSelection.trim() === "") {
-                // Selection is at the beginning - move entire paragraph content
-                return containerText
+                // Selection is at the beginning - collect all content from this container to end of verse
+                return getAllContentFromContainerToEndOfVerse(editor, verse, versePath, containerIndex)
             } else {
-                // Selection is in middle/end - move text after selection
-                return textAfterSelection
+                // Selection is in middle/end - collect text after selection plus all subsequent content
+                return textAfterSelection + getAllContentFromNextContainersToEndOfVerse(editor, verse, versePath, containerIndex)
             }
         }
     }
@@ -250,7 +284,7 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
     }
 
     // Helper function to handle the original container content
-    const handleOriginalContainerContent = (editor: Editor, containerPath: Path, containerIndex: number, textBeforeSelection: string) => {
+    const handleOriginalContainerContent = (editor: Editor, containerPath: Path, containerIndex: number, textBeforeSelection: string, verse: Element, versePath: Path) => {
         if (containerIndex === 1) {
             // Selection was in inline container - update with text before selection
             MyTransforms.replaceNodes(editor, containerPath, emptyInlineContainer())
@@ -258,11 +292,32 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         } else {
             // Selection was in paragraph or other element
             if (textBeforeSelection.trim() === "") {
-                // Remove the paragraph since all content moved to new verse
-                Transforms.removeNodes(editor, { at: containerPath })
+                // Remove all containers from this point to the end of the verse since all content moved to new verse
+                removeContainersFromIndexToEnd(editor, versePath, containerIndex)
             } else {
-                // Keep the text before selection in the original paragraph
+                // Keep the text before selection in the original paragraph and remove subsequent containers
                 MyTransforms.replaceText(editor, containerPath.concat(0), textBeforeSelection)
+                removeContainersFromIndexToEnd(editor, versePath, containerIndex + 1)
+            }
+        }
+    }
+
+    // Helper function to remove all containers from a given index to the end of the verse
+    const removeContainersFromIndexToEnd = (editor: Editor, versePath: Path, startIndex: number) => {
+        // Get the current verse node to know how many children it has
+        const [currentVerse] = Editor.node(editor, versePath)
+        if (!Element.isElement(currentVerse)) return
+        
+        // Remove containers from the end to avoid path shifting issues
+        for (let i = currentVerse.children.length - 1; i >= startIndex; i--) {
+            const containerPath = versePath.concat(i)
+            // Check if the path still exists before trying to remove it
+            try {
+                Editor.node(editor, containerPath)
+                Transforms.removeNodes(editor, { at: containerPath })
+            } catch (error) {
+                // Path doesn't exist anymore, skip it
+                console.warn(`Container at path ${containerPath} no longer exists, skipping removal`)
             }
         }
     }
