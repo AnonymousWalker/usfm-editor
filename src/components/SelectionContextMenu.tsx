@@ -72,7 +72,7 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         const newVerseNum = getNextVerseNumber(verse.children[0])
 
         // Prepare content for the new verse
-        const contentForNewVerse = getContentForNewVerse(editor, verse, versePath, containerIndex, textBeforeSelection, textAfterSelection, containerText)
+        const containersForNewVerse = getContentForNewVerse(editor, verse, versePath, containerIndex, textBeforeSelection, textAfterSelection, containerText)
 
         // Split the verse node at the selection point FIRST
         Transforms.splitNodes(editor, {
@@ -81,7 +81,7 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         })
 
         // Update the new verse number and content (using the original versePath since splitNodes creates the new verse at Path.next(versePath))
-        updateNewVerseContent(editor, versePath, newVerseNum, contentForNewVerse)
+        updateNewVerseContent(editor, versePath, newVerseNum, containersForNewVerse)
 
         // Handle the original container content AFTER splitting and updating
         handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection, verse, versePath)
@@ -209,78 +209,65 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         return currentVerseNum + 1
     }
 
-    // Helper function to collect all content from a container to the end of the verse
-    const getAllContentFromContainerToEndOfVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number): string => {
-        let allContent = ""
+    // Helper function to get containers that should be moved to the new verse
+    const getContainersForNewVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number, textBeforeSelection: string, textAfterSelection: string): Node[] => {
+        const containersToMove: Node[] = []
         
-        // Start from the current container and collect all subsequent containers
-        for (let i = containerIndex; i < verse.children.length; i++) {
-            const containerPath = versePath.concat(i)
-            const [container] = Editor.node(editor, containerPath)
-            const containerText = Node.string(container)
-            
-            if (i === containerIndex) {
-                // For the first container, use its full text
-                allContent += containerText
+        if (containerIndex === 1) {
+            // Selection is in inline container - create a new inline container with text after selection
+            containersToMove.push({
+                type: NodeTypes.INLINE_CONTAINER,
+                children: [{ text: textAfterSelection }]
+            })
+        } else {
+            // Selection is in paragraph or other element
+            if (textBeforeSelection.trim() === "") {
+                // Selection is at the beginning - move all containers from this point to end of verse
+                for (let i = containerIndex; i < verse.children.length; i++) {
+                    const containerPath = versePath.concat(i)
+                    const [container] = Editor.node(editor, containerPath)
+                    // Create a deep copy of the container
+                    containersToMove.push(JSON.parse(JSON.stringify(container)))
+                }
             } else {
-                // For subsequent containers, add a space before the text if it's not empty
-                if (containerText.trim() !== "") {
-                    allContent += " " + containerText
+                // Selection is in middle/end - create a paragraph with text after selection, then move subsequent containers
+                containersToMove.push({
+                    type: "p", // Paragraph type from UsfmMarkers
+                    children: [{ text: textAfterSelection }]
+                })
+                
+                // Add all subsequent containers
+                for (let i = containerIndex + 1; i < verse.children.length; i++) {
+                    const containerPath = versePath.concat(i)
+                    const [container] = Editor.node(editor, containerPath)
+                    // Create a deep copy of the container
+                    containersToMove.push(JSON.parse(JSON.stringify(container)))
                 }
             }
         }
         
-        return allContent
-    }
-
-    // Helper function to collect all content from the next containers to the end of the verse
-    const getAllContentFromNextContainersToEndOfVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number): string => {
-        let allContent = ""
-        
-        // Start from the next container and collect all subsequent containers
-        for (let i = containerIndex + 1; i < verse.children.length; i++) {
-            const containerPath = versePath.concat(i)
-            const [container] = Editor.node(editor, containerPath)
-            const containerText = Node.string(container)
-            
-            // Add a space before the text if it's not empty
-            if (containerText.trim() !== "") {
-                allContent += " " + containerText
-            }
-        }
-        
-        return allContent
+        return containersToMove
     }
 
     // Helper function to determine content for the new verse
-    const getContentForNewVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number, textBeforeSelection: string, textAfterSelection: string, containerText: string): string => {
-        if (containerIndex === 1) {
-            // Selection is in inline container - use text after selection
-            return textAfterSelection
-        } else {
-            // Selection is in paragraph or other element
-            if (textBeforeSelection.trim() === "") {
-                // Selection is at the beginning - collect all content from this container to end of verse
-                return getAllContentFromContainerToEndOfVerse(editor, verse, versePath, containerIndex)
-            } else {
-                // Selection is in middle/end - collect text after selection plus all subsequent content
-                return textAfterSelection + getAllContentFromNextContainersToEndOfVerse(editor, verse, versePath, containerIndex)
-            }
-        }
+    const getContentForNewVerse = (editor: Editor, verse: Element, versePath: Path, containerIndex: number, textBeforeSelection: string, textAfterSelection: string, containerText: string): Node[] => {
+        return getContainersForNewVerse(editor, verse, versePath, containerIndex, textBeforeSelection, textAfterSelection)
     }
 
     // Helper function to update the new verse content
-    const updateNewVerseContent = (editor: Editor, versePath: Path, newVerseNum: number, contentForNewVerse: string) => {
+    const updateNewVerseContent = (editor: Editor, versePath: Path, newVerseNum: number, containersForNewVerse: Node[]) => {
         const newVersePath = Path.next(versePath)
         const newVerseNumPath = newVersePath.concat(0)
-        const newInlineContainerPath = newVersePath.concat(1)
         
         // Update verse number
         MyTransforms.replaceNodes(editor, newVerseNumPath, verseNumber(newVerseNum.toString()))
         
-        // Update content
-        MyTransforms.replaceNodes(editor, newInlineContainerPath, emptyInlineContainer())
-        MyTransforms.replaceText(editor, newInlineContainerPath.concat(0), contentForNewVerse)
+        // Remove the default inline container and replace with our structured content
+        const newVerseInlineContainerPath = newVersePath.concat(1)
+        Transforms.removeNodes(editor, { at: newVerseInlineContainerPath })
+        
+        // Insert all the containers for the new verse
+        Transforms.insertNodes(editor, containersForNewVerse, { at: newVerseInlineContainerPath })
     }
 
     // Helper function to handle the original container content
