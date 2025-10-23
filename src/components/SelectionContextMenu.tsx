@@ -70,7 +70,6 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
 
         // Calculate the new verse number
         const newVerseNum = getNextVerseNumber(verse.children[0])
-        const newVerse = emptyVerseWithVerseNumber(newVerseNum.toString())
         // Transforms.insertNodes(editor, newVerse, { at: selectionStart.path })
 
         // Split the verse node at the selection point FIRST
@@ -79,17 +78,51 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
             match: (n) => Element.isElement(n) && n.type === NodeTypes.VERSE,
         })
 
-        // Create and insert a "v" node with the verse number
         const newVersePath = Path.next(versePath)
         try {
             const [newVerse] = Editor.node(editor, newVersePath)
             console.log("new verse path:", newVersePath)
-            
+            console.log("New verse (after split):", JSON.stringify(newVerse, null, 2))
+
             // Create a "v" node with the verse number
             const verseMarkerNode = verseNumber(newVerseNum.toString())            
             // Insert the "v" node at the beginning of the new verse
             Transforms.insertNodes(editor, verseMarkerNode, { at: newVersePath.concat(0) })
-            console.log("New verse (after split):", JSON.stringify(newVerse, null, 2))
+            
+            // Check if the first child is of type "p"
+            const firstChildIsP = Array.isArray(newVerse.children) && newVerse.children.length > 0 && newVerse.children[0].type === "p"
+            if (firstChildIsP && Array.isArray(newVerse.children)) {
+                const firstPNode = newVerse.children[0]
+                if (Array.isArray(firstPNode.children) && firstPNode.children.length > 0) {
+                    const firstChild = firstPNode.children[0]
+                    if ('text' in firstChild && firstChild.text) {
+                        const extractedText = firstChild.text
+                        
+                        const [insertedVerse] = Editor.node(editor, newVersePath)
+                        console.log("inserted verse:", JSON.stringify(insertedVerse, null, 2))
+                        
+                        // Find the inlineContainer and update its first child's text
+                        if (Array.isArray(insertedVerse.children)) {
+                            const inlineContainer = insertedVerse.children.find(child => child.type === "inlineContainer")
+                            if (inlineContainer && Array.isArray(inlineContainer.children) && inlineContainer.children.length > 0) {
+                                const inlineFirstChild = inlineContainer.children[0]
+                                if ('text' in inlineFirstChild) {
+                                    // Update the text content using insertText
+                                    const targetPath = newVersePath.concat([1, 0]) // Path to inlineContainer's first child
+                                    
+                                    // First select the text node, then insert the new text
+                                    Transforms.select(editor, targetPath)
+                                    Transforms.insertText(editor, extractedText)
+                                    
+                                    // Remove the first "p" node after inserting its text
+                                    const firstPNodePath = newVersePath.concat([2]) // Path to the first "p" node (index 2)
+                                    Transforms.removeNodes(editor, { at: firstPNodePath })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } catch (error) {
             console.log("Could not get new verse at path:", newVersePath, "Error:", error)
         }
