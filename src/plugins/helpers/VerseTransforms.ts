@@ -141,6 +141,17 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
 
     const { verse, versePath, containerIndex, containerPath, containerText, textBeforeSelection, textAfterSelection } = verseInfo
 
+    // Check if the cursor is at the end of the editor where splitNodes would have no effect
+    const isAtEndOfEditor = isCursorAtEndOfEditor(editor, point)
+    
+    if (isAtEndOfEditor) {
+        // Simply add an empty verse at the end
+        const newVerse = emptyVerseWithVerseNumber(verseNumberStr)
+        Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) })
+        MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath))
+        return
+    }
+
     // Split the verse node at the selection point FIRST
     Transforms.splitNodes(editor, {
         at: point,
@@ -245,6 +256,21 @@ function getNextVerseNumber(verseNumberNode: Node): number {
     const [rangeStart, rangeEnd] = verseNumberOrRange.split("-")
     const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart)
     return currentVerseNum + 1
+}
+
+// Helper function to check if cursor is at the end of the editor where splitNodes would have no effect
+function isCursorAtEndOfEditor(editor: Editor, point: Point): boolean {
+    // Get the verse node at the cursor position
+    const verseEntry = MyEditor.getVerseNode(editor, point.path)
+    if (!verseEntry) return false
+    
+    const [verse, versePath] = verseEntry
+    
+    // Check if the cursor is at the very end of the verse's text content
+    const verseEnd = Editor.end(editor, versePath)
+    
+    // If the cursor is at the end of the verse, splitNodes would have no effect
+    return Point.equals(point, verseEnd)
 }
 
 /**
