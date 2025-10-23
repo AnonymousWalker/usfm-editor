@@ -12,7 +12,7 @@ import ListItemText from "@material-ui/core/ListItemText"
 import AddIcon from "@material-ui/icons/Add"
 import { Range, Editor, Path, Node, Element, Transforms, Point } from "slate"
 import NodeTypes from "../utils/NodeTypes"
-import { verseNumber, emptyInlineContainer } from "../transforms/basicSlateNodeFactory"
+import { verseNumber, emptyInlineContainer, emptyVerseWithVerseNumber } from "../transforms/basicSlateNodeFactory"
 
 type SelectionContextMenuProps = {
     open: boolean
@@ -70,9 +70,8 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
 
         // Calculate the new verse number
         const newVerseNum = getNextVerseNumber(verse.children[0])
-
-        // Prepare content for the new verse
-        const containersForNewVerse = getContentForNewVerse(editor, verse, versePath, containerIndex, textBeforeSelection, textAfterSelection, containerText)
+        const newVerse = emptyVerseWithVerseNumber(newVerseNum.toString())
+        // Transforms.insertNodes(editor, newVerse, { at: selectionStart.path })
 
         // Split the verse node at the selection point FIRST
         Transforms.splitNodes(editor, {
@@ -80,16 +79,20 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
             match: (n) => Element.isElement(n) && n.type === NodeTypes.VERSE,
         })
 
-        // Update the new verse number and content (using the original versePath since splitNodes creates the new verse at Path.next(versePath))
-        updateNewVerseContent(editor, versePath, newVerseNum, containersForNewVerse)
-
-        // Handle the original container content AFTER splitting and updating
-        handleOriginalContainerContent(editor, containerPath, containerIndex, textBeforeSelection, verse, versePath)
-
-        // Move cursor to the start of the new verse content
+        // Create and insert a "v" node with the verse number
         const newVersePath = Path.next(versePath)
-        const newInlineContainerPath = newVersePath.concat(1)
-        Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+        try {
+            const [newVerse] = Editor.node(editor, newVersePath)
+            console.log("new verse path:", newVersePath)
+            
+            // Create a "v" node with the verse number
+            const verseMarkerNode = verseNumber(newVerseNum.toString())            
+            // Insert the "v" node at the beginning of the new verse
+            Transforms.insertNodes(editor, verseMarkerNode, { at: newVersePath.concat(0) })
+            console.log("New verse (after split):", JSON.stringify(newVerse, null, 2))
+        } catch (error) {
+            console.log("Could not get new verse at path:", newVersePath, "Error:", error)
+        }
     }
 
     const handleAddVerse = () => {
