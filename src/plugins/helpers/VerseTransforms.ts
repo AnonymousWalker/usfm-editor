@@ -111,8 +111,8 @@ function addVerse(editor: Editor, path: Path): void {
     )
 }
 
-function addVerseAtSelection(editor: Editor, selection: Range): void {
-    if (!selection) return
+function addVerseAtSelection(editor: Editor, selection: Range): Path | null {
+    if (!selection) return null
 
     // Get the start of the selection
     const selectionStart = Range.isBackward(selection)
@@ -121,23 +121,23 @@ function addVerseAtSelection(editor: Editor, selection: Range): void {
 
     // Calculate the new verse number from the current verse
     const verseNodeEntry = MyEditor.getVerseNode(editor, selectionStart.path)
-    if (!verseNodeEntry) return
+    if (!verseNodeEntry) return null
     
     const [verse] = verseNodeEntry
     const newVerseNum = getNextVerseNumber(verse.children[0])
 
     // Call the main function with the selection start point and calculated verse number
-    addVerseAtPoint(editor, selectionStart, newVerseNum.toString())
+    return addVerseAtPoint(editor, selectionStart, newVerseNum.toString())
 }
 
-function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): void {
-    if (!point) return
+function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): Path | null {
+    if (!point) return null
 
     console.log("point", point)
 
     // Find the verse node and container information
     const verseInfo = getVerseAndContainerInfo(editor, point)
-    if (!verseInfo) return
+    if (!verseInfo) return null
 
     const { verse, versePath, containerIndex, containerPath, containerText, textBeforeSelection, textAfterSelection } = verseInfo
 
@@ -147,9 +147,10 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
     if (isAtEndOfEditor) {
         // Simply add an empty verse at the end
         const newVerse = emptyVerseWithVerseNumber(verseNumberStr)
-        Transforms.insertNodes(editor, newVerse, { at: Path.next(versePath) })
-        MyTransforms.moveToEndOfLastLeaf(editor, Path.next(versePath))
-        return
+        const newVersePath = Path.next(versePath)
+        Transforms.insertNodes(editor, newVerse, { at: newVersePath })
+        MyTransforms.moveToEndOfLastLeaf(editor, newVersePath)
+        return newVersePath
     }
 
     // Split the verse node at the selection point FIRST
@@ -201,8 +202,11 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
                 }
             }
         }
+        
+        return newVersePath
     } catch (error) {
         console.log("Could not get new verse at path:", newVersePath, "Error:", error)
+        return null
     }
 }
 

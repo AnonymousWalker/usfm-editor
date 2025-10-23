@@ -225,8 +225,8 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                     // If either pattern matched, create the verse
                     if (verseNumber) {
                                                
-                        // Use the refactored function to create the verse
-                        VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
+                        // Use the refactored function to create the verse and get the new verse path
+                        const newVersePath = VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
                         
                         // Delete the matched text
                         const deleteStart = offset - matchLength
@@ -236,6 +236,13 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                                 focus: { path: selection.anchor.path, offset: offset }
                             }
                         })
+
+                        // Move cursor to the new verse's inline container if the verse was created successfully
+                        if (newVersePath) {
+                            const newInlineContainerPath = newVersePath.concat(1, 0)
+                            Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+                        }
+                        
                         return
                     }
                 }

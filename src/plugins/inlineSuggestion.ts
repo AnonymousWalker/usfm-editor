@@ -159,9 +159,15 @@ export function handleTabKeyForSuggestion(
                 }
             }
             
-            // Use the refactored function to create the verse
+            // Use the refactored function to create the verse and get the new verse path
             if (editor.selection) {
-                VerseTransforms.addVerseAtPoint(editor, editor.selection.anchor, verseNumber)
+                const newVersePath = VerseTransforms.addVerseAtPoint(editor, editor.selection.anchor, verseNumber)
+                
+                // Move cursor to the new verse's inline container if the verse was created successfully
+                if (newVersePath) {
+                    const newInlineContainerPath = newVersePath.concat(1, 0)
+                    Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+                }
             }
             
             clearSuggestion(editor)
