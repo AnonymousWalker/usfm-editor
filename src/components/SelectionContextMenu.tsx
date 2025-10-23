@@ -81,15 +81,14 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         const newVersePath = Path.next(versePath)
         try {
             const [newVerse] = Editor.node(editor, newVersePath)
-            console.log("new verse path:", newVersePath)
-            console.log("New verse (after split):", JSON.stringify(newVerse, null, 2))
-
             // Create a "v" node with the verse number
             const verseMarkerNode = verseNumber(newVerseNum.toString())            
-            // Insert the "v" node at the beginning of the new verse
             Transforms.insertNodes(editor, verseMarkerNode, { at: newVersePath.concat(0) })
             
-            // Check if the first child is of type "p"
+            /* 
+            Check if the first child is of type "p". This is because after splitting nodes, the part after the split will have the same node type as the original.
+            For a verse text, it should be in an inline container. If the split yields a "p" node, we need to move the text to the inline container and remove the "p" node.
+            */
             const firstChildIsP = Array.isArray(newVerse.children) && newVerse.children.length > 0 && newVerse.children[0].type === "p"
             if (firstChildIsP && Array.isArray(newVerse.children)) {
                 const firstPNode = newVerse.children[0]
@@ -99,7 +98,6 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
                         const extractedText = firstChild.text
                         
                         const [insertedVerse] = Editor.node(editor, newVersePath)
-                        console.log("inserted verse:", JSON.stringify(insertedVerse, null, 2))
                         
                         // Find the inlineContainer and update its first child's text
                         if (Array.isArray(insertedVerse.children)) {
