@@ -1,4 +1,4 @@
-import { Transforms, Editor, Path, Element } from "slate"
+import { Transforms, Editor, Path, Element, Range, Point } from "slate"
 import { MyTransforms } from "./MyTransforms"
 import { MyEditor } from "./MyEditor"
 import { Node } from "slate"
@@ -7,14 +7,18 @@ import {
     emptyVerseWithVerseNumber,
     textNode,
     verseNumber,
+    emptyInlineContainer,
 } from "../../transforms/basicSlateNodeFactory"
 import NodeRules from "../../utils/NodeRules"
+import NodeTypes from "../../utils/NodeTypes"
 
 export const VerseTransforms = {
     joinWithPreviousVerse,
     unjoinVerses,
     removeVerseAndConcatenateContentsWithPrevious,
     addVerse,
+    addVerseAtSelection,
+    addVerseAtPoint,
 }
 
 function joinWithPreviousVerse(editor: Editor, path: Path): void {
@@ -105,6 +109,142 @@ function addVerse(editor: Editor, path: Path): void {
         verseNumPath,
         verseNumber(verseNumberOrRange)
     )
+}
+
+function addVerseAtSelection(editor: Editor, selection: Range): void {
+    if (!selection) return
+
+    // Get the start of the selection
+    const selectionStart = Range.isBackward(selection)
+        ? selection.focus
+        : selection.anchor
+
+    // Calculate the new verse number from the current verse
+    const verseNodeEntry = MyEditor.getVerseNode(editor, selectionStart.path)
+    if (!verseNodeEntry) return
+    
+    const [verse] = verseNodeEntry
+    const newVerseNum = getNextVerseNumber(verse.children[0])
+
+    // Call the main function with the selection start point and calculated verse number
+    addVerseAtPoint(editor, selectionStart, newVerseNum.toString())
+}
+
+function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): void {
+    if (!point) return
+
+    console.log("point", point)
+
+    // Find the verse node and container information
+    const verseInfo = getVerseAndContainerInfo(editor, point)
+    if (!verseInfo) return
+
+    const { verse, versePath, containerIndex, containerPath, containerText, textBeforeSelection, textAfterSelection } = verseInfo
+
+    // Split the verse node at the selection point FIRST
+    Transforms.splitNodes(editor, {
+        at: point,
+        match: (n) => Element.isElement(n) && n.type === NodeTypes.VERSE,
+    })
+
+    const newVersePath = Path.next(versePath)
+    try {
+        const [newVerse] = Editor.node(editor, newVersePath)
+        // Create a "v" node with the verse number
+        const verseMarkerNode = verseNumber(verseNumberStr)            
+        Transforms.insertNodes(editor, verseMarkerNode, { at: newVersePath.concat(0) })
+        
+        /* 
+        Check if the first child is of type "p". This is because after splitting nodes, the part after the split will have the same node type as the original.
+        For a verse text, it should be in an inline container. If the split yields a "p" node, we need to move the text to the inline container and remove the "p" node.
+        */
+        const firstChildIsP = Array.isArray(newVerse.children) && newVerse.children.length > 0 && newVerse.children[0].type === "p"
+        if (firstChildIsP && Array.isArray(newVerse.children)) {
+            const firstPNode = newVerse.children[0]
+            if (Array.isArray(firstPNode.children) && firstPNode.children.length > 0) {
+                const firstChild = firstPNode.children[0]
+                if ('text' in firstChild && firstChild.text) {
+                    const extractedText = firstChild.text
+                    
+                    const [insertedVerse] = Editor.node(editor, newVersePath)
+                    
+                    // Find the inlineContainer and update its first child's text
+                    if (Array.isArray(insertedVerse.children)) {
+                        const inlineContainer = insertedVerse.children.find(child => child.type === "inlineContainer")
+                        if (inlineContainer && Array.isArray(inlineContainer.children) && inlineContainer.children.length > 0) {
+                            const inlineFirstChild = inlineContainer.children[0]
+                            if ('text' in inlineFirstChild) {
+                                // Update the text content using insertText
+                                const targetPath = newVersePath.concat([1, 0]) // Path to inlineContainer's first child
+                                
+                                // First select the text node, then insert the new text
+                                Transforms.select(editor, targetPath)
+                                Transforms.insertText(editor, extractedText)
+                                
+                                // Remove the first "p" node after inserting its text
+                                const firstPNodePath = newVersePath.concat([2]) // Path to the first "p" node (index 2)
+                                Transforms.removeNodes(editor, { at: firstPNodePath })
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.log("Could not get new verse at path:", newVersePath, "Error:", error)
+    }
+}
+
+// Helper function to get verse and container information
+function getVerseAndContainerInfo(editor: Editor, selectionStart: Point) {
+    const verseEntry = MyEditor.getVerseNode(editor, selectionStart.path)
+    if (!verseEntry) return null
+
+    const [verse, versePath] = verseEntry
+
+    let containerIndex = -1
+    let containerPath: Path | null = null
+    
+    for (let i = 1; i < verse.children.length; i++) {
+        const childPath = versePath.concat(i)
+        
+        if (Path.isDescendant(selectionStart.path, childPath) || Path.equals(selectionStart.path, childPath)) {
+            containerIndex = i
+            containerPath = childPath
+            break
+        }
+    }
+    
+    if (containerPath === null) {
+        console.error("Could not find container for selection within verse")
+        return null
+    }
+    
+    const [container] = Editor.node(editor, containerPath)
+    const containerText = Node.string(container)
+    
+    const containerStartPoint = Editor.start(editor, containerPath)
+    const preRange = Editor.range(editor, containerStartPoint, selectionStart)
+    const textBeforeSelection = Editor.string(editor, preRange)
+    const textAfterSelection = containerText.slice(textBeforeSelection.length)
+
+    return {
+        verse,
+        versePath,
+        containerIndex,
+        containerPath,
+        containerText,
+        textBeforeSelection,
+        textAfterSelection
+    }
+}
+
+// Helper function to calculate the next verse number
+function getNextVerseNumber(verseNumberNode: Node): number {
+    const verseNumberOrRange = Node.string(verseNumberNode)
+    const [rangeStart, rangeEnd] = verseNumberOrRange.split("-")
+    const currentVerseNum = rangeEnd ? parseInt(rangeEnd) : parseInt(rangeStart)
+    return currentVerseNum + 1
 }
 
 /**
