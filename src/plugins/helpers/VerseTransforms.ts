@@ -19,6 +19,7 @@ export const VerseTransforms = {
     addVerse,
     addVerseAtSelection,
     addVerseAtPoint,
+    getNextVerseNumber,
 }
 
 function joinWithPreviousVerse(editor: Editor, path: Path): void {
@@ -111,7 +112,7 @@ function addVerse(editor: Editor, path: Path): void {
     )
 }
 
-function addVerseAtSelection(editor: Editor, selection: Range): Path | null {
+function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: string): Path | null {
     if (!selection) return null
 
     // Get the start of the selection
@@ -119,15 +120,20 @@ function addVerseAtSelection(editor: Editor, selection: Range): Path | null {
         ? selection.focus
         : selection.anchor
 
-    // Calculate the new verse number from the current verse
-    const verseNodeEntry = MyEditor.getVerseNode(editor, selectionStart.path)
-    if (!verseNodeEntry) return null
-    
-    const [verse] = verseNodeEntry
-    const newVerseNum = getNextVerseNumber(verse.children[0])
+    // Calculate the new verse number from the current verse if not provided
+    let verseNumber: string
+    if (newVerseNum !== undefined) {
+        verseNumber = newVerseNum
+    } else {
+        const verseNodeEntry = MyEditor.getVerseNode(editor, selectionStart.path)
+        if (!verseNodeEntry) return null
+        
+        const [verse] = verseNodeEntry
+        verseNumber = getNextVerseNumber(verse.children[0]).toString()
+    }
 
-    // Call the main function with the selection start point and calculated verse number
-    return addVerseAtPoint(editor, selectionStart, newVerseNum.toString())
+    // Call the main function with the selection start point and verse number
+    return addVerseAtPoint(editor, selectionStart, verseNumber)
 }
 
 function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): Path | null {

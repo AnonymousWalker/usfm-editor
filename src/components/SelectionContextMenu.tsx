@@ -1,7 +1,6 @@
 import * as React from "react"
 import { useSlate, ReactEditor } from "slate-react"
 import { MyEditor } from "../plugins/helpers/MyEditor"
-import { MyTransforms } from "../plugins/helpers/MyTransforms"
 import Popper from "@material-ui/core/Popper"
 import ClickAwayListener from "@material-ui/core/ClickAwayListener"
 import MenuItem from "@material-ui/core/MenuItem"
@@ -51,13 +50,9 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         }
     }, [open, editor.selection])
 
-    const addVerseAtSelection = (selection: Range) => {
-        VerseTransforms.addVerseAtSelection(editor, selection)
-    }
-
     const handleAddVerse = () => {
         if (!editor.selection) return
-        addVerseAtSelection(editor.selection)
+        VerseTransforms.addVerseAtSelection(editor, editor.selection)
 
         handleClose()
         ReactEditor.focus(editor)
@@ -107,13 +102,26 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
                 }
                 positionsToAdd.push(modifiedSelection)
             }
+
+            console.log("positions to add:", JSON.stringify(positionsToAdd, null, 2))
             
-            // Call addVerseAtSelection for each position
-            positionsToAdd.forEach(selection => {
-                addVerseAtSelection(selection)
-            })
+            // Get the starting verse number from the selection start point
+            const selectionStartPoint = isAscending ? editor.selection.anchor : editor.selection.focus
+            const verseNodeEntry = MyEditor.getVerseNode(editor, selectionStartPoint.path)
+            if (verseNodeEntry) {
+                const [verse] = verseNodeEntry
+                const currentVerseNum = VerseTransforms.getNextVerseNumber(verse.children[0])
+                
+                // Call addVerseAtSelection for each position in reverse order (bottom up)
+                // with decreasing verse numbers, so that it doesn't affect the verse above
+                positionsToAdd.reverse().forEach((pos, index) => {
+                    const verseNum = (currentVerseNum + positionsToAdd.length - index - 1).toString()
+                    VerseTransforms.addVerseAtSelection(editor, pos, verseNum)
+                })
+                
+                console.log(`Added ${paragraphBreaks} markers`)
+            }
             
-            console.log(`Added ${paragraphBreaks} markers`)
         }        
         
         handleClose()
