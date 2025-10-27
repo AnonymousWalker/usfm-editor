@@ -213,10 +213,11 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                         matchLength = verseMatch[0].length
                     } else {
                         // Pattern 2: {number}.  (number followed by period and double space)
-                        const numberPattern = /(^|\s)(\d+)\.\s$/
+                        const numberPattern = /(^|\s)(\d+)\.$/
                         const numberMatch = textBeforeCursor.match(numberPattern)
                         
-                        if (numberMatch) {
+                        // Do not trigger on numbers greater than 180
+                        if (numberMatch && parseInt(numberMatch[2], 10) < 180) {
                             verseNumber = numberMatch[2]
                             matchLength = numberMatch[0].length - 1 // don't include the prefix space
                         }
