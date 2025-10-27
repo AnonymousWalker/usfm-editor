@@ -99,14 +99,14 @@ function withVerseMenu<P>(VerseNum: React.FC<P>) {
                     onMouseDown={handleToggle}
                     ref={verseNumberRef}
                 />
-                {hasMenu && verseNumberRef.current && (
+                {/* {hasMenu && verseNumberRef.current && (
                     <VerseNumberMenu
                         verseNumberEl={verseNumberRef.current}
                         open={open}
                         handleClose={() => setOpen(false)}
                         useVerseAddRemove={useVerseAddRemove}
                     />
-                )}
+                )} */}
             </React.Fragment>
         )
     }
