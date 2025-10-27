@@ -36,7 +36,9 @@
         "lintFix": "eslint '**/*.{js,jsx,ts,tsx}' --quiet --fix",
         "formatCheck": "prettier --check .",
         "formatFix": "prettier --write .",
-        "webapp": "webpack serve --config webpack.webapp.config.js"
+        "webapp": "webpack serve --config webpack.webapp.config.js",
+        "build:webapp": "cross-env NODE_ENV=production webpack --config webpack.webapp.config.js",
+        "build:webapp:clean": "if exist build rmdir /s /q build && npm run build:webapp"
     },
     "dependencies": {
         "@material-ui/core": "4.12.3",
@@ -72,6 +74,7 @@
         "@typescript-eslint/eslint-plugin": "5.11.0",
         "@typescript-eslint/parser": "5.11.0",
         "babel-jest": "27.3.1",
+        "cross-env": "^10.1.0",
         "css-loader": "5.2.7",
         "enzyme": "3.11.0",
         "eslint": "8.8.0",
