@@ -219,7 +219,7 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                         // Do not trigger on numbers greater than 180
                         if (numberMatch && parseInt(numberMatch[2], 10) < 180) {
                             verseNumber = numberMatch[2]
-                            matchLength = numberMatch[0].length - 1 // don't include the prefix space
+                            matchLength = numberMatch[0].length
                         }
                     }
                     
