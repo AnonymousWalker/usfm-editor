@@ -139,6 +139,17 @@ export function handleTabKeyForSuggestion(
         if (verseNumberMatch) {
             const verseNumber = verseNumberMatch[0]
             
+            // Use the refactored function to create the verse and get the new verse path
+            if (editor.selection) {
+                const newVersePath = VerseTransforms.addVerseAtPoint(editor, editor.selection.anchor, verseNumber)
+                
+                // Move cursor to the new verse's inline container if the verse was created successfully
+                if (newVersePath) {
+                    const newInlineContainerPath = newVersePath.concat(1, 0)
+                    Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+                }
+            }
+            
             // Delete the backslash (and any partial text like "\v")
             const currentNode = Editor.node(editor, selection.anchor.path)
             if (currentNode && Text.isText(currentNode[0])) {
@@ -156,17 +167,6 @@ export function handleTabKeyForSuggestion(
                             focus: { path: selection.anchor.path, offset: offset }
                         }
                     })
-                }
-            }
-            
-            // Use the refactored function to create the verse and get the new verse path
-            if (editor.selection) {
-                const newVersePath = VerseTransforms.addVerseAtPoint(editor, editor.selection.anchor, verseNumber)
-                
-                // Move cursor to the new verse's inline container if the verse was created successfully
-                if (newVersePath) {
-                    const newInlineContainerPath = newVersePath.concat(1, 0)
-                    Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
                 }
             }
             
