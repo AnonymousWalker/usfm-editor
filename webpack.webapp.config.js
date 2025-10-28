@@ -9,7 +9,7 @@ const config = {
         fullySpecified: false,
     },
     output: {
-        path: path.resolve(__dirname, isProduction ? "build" : "webapp-dist"),
+        path: path.resolve(__dirname, isProduction ? "docs" : "webapp-dist"),
         filename: "bundle.js",
     },
     mode: isProduction ? "production" : "development",

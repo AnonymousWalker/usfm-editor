@@ -38,7 +38,7 @@
         "formatFix": "prettier --write .",
         "webapp": "webpack serve --config webpack.webapp.config.js",
         "build:webapp": "cross-env NODE_ENV=production webpack --config webpack.webapp.config.js",
-        "build:webapp:clean": "if exist build rmdir /s /q build && npm run build:webapp"
+        "build:webapp:clean": "if exist docs\\ rmdir /s /q docs\\ && npm run build:webapp"
     },
     "dependencies": {
         "@material-ui/core": "4.12.3",
