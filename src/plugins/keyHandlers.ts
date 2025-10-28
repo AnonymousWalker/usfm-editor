@@ -1,4 +1,4 @@
-import { Range, Editor, Transforms, Path, Node, Text } from "slate"
+import { Range, Editor, Transforms, Path, Node, Text, Point } from "slate"
 import { MyEditor } from "./helpers/MyEditor"
 import { MyTransforms } from "./helpers/MyTransforms"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
@@ -47,19 +47,19 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
             // Check if we're at the start of an inline container with a verse number before it
             if (MyEditor.isNearbyBlockAVerseNumber(editor, "previous")) {
                 const prevBlock = MyEditor.getPreviousBlock(editor)?.[0]
-                
+
                 // Don't allow deleting the "front" verse marker
                 if (prevBlock && Node.string(prevBlock) === "front") {
                     console.debug("Cannot delete 'front' verse, skipping backspace")
                     return
                 }
-                
+
                 // Delete the verse number and merge with previous verse
                 const verseNodeEntry = MyEditor.getVerseNode(editor)
                 if (verseNodeEntry) {
                     const [_verse, versePath] = verseNodeEntry
                     const verseNumPath = versePath.concat(0)
-                    
+
                     // Check if there's a previous verse to merge into
                     const prevVerse = MyEditor.getPreviousVerse(editor, versePath)
                     if (prevVerse) {
@@ -193,21 +193,21 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
 
         if (selection && Range.isCollapsed(selection)) {
             const currentNode = Editor.node(editor, selection.anchor.path)
-            
+
             if (currentNode && Text.isText(currentNode[0])) {
                 const textContent = currentNode[0].text
                 const offset = selection.anchor.offset
                 const textBeforeCursor = textContent.substring(0, offset)
-                
+
                 // Both patterns trigger on space character
                 if (text === " ") {
                     let verseNumber: string | null = null
                     let matchLength = 0
-                    
+
                     // Pattern 1: \v {number} followed by space
                     const versePattern = /\\v\s+(\d+)$/
                     const verseMatch = textBeforeCursor.match(versePattern)
-                    
+
                     if (verseMatch) {
                         verseNumber = verseMatch[1]
                         matchLength = verseMatch[0].length
@@ -215,14 +215,73 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                         // Pattern 2: {number}.  (number followed by period and double space)
                         const numberPattern = /(^|\s)(\d+)\.$/
                         const numberMatch = textBeforeCursor.match(numberPattern)
-                        
+
                         // Do not trigger on numbers greater than 180
                         if (numberMatch && parseInt(numberMatch[2], 10) < 180) {
                             verseNumber = numberMatch[2]
                             matchLength = numberMatch[0].length - 1
+
+                            const isCursorAtEndOfNode = offset >= currentNode[0].text.length
+                            let extraSpaceLength = 0
+                            if (isCursorAtEndOfNode) {
+                                // workaround for inserting verse at the end of a paragraph, it should not wrap the next line into the same paragraph
+                                const pointBeforeInsert = selection.anchor
+                                Transforms.insertText(editor, " ")
+                                Transforms.select(editor, pointBeforeInsert)
+                            }
+
+                            const isInsertingAtBeginningOfNode = offset === matchLength + 1
+                            let originalSelectionAnchor = selection.anchor
+
+                            if (isInsertingAtBeginningOfNode) {
+                                console.log("adding verse at the beginning of the text")
+                                // Insert space and move cursor forward, following pattern from VerseTransforms
+                                Transforms.insertText(editor, " ", { at: { path: selection.anchor.path, offset: 0 } })
+                                const pointAfterInsert: Point = { path: selection.anchor.path, offset: selection.anchor.offset + 1 }
+                                Transforms.select(editor, pointAfterInsert)
+                                originalSelectionAnchor = pointAfterInsert
+                                extraSpaceLength++
+                            }
+
+                            // Use the refactored function to create the verse and get the new verse path
+                            const newVersePath = VerseTransforms.addVerseAtPoint(editor, originalSelectionAnchor, verseNumber)
+
+                            // Delete the matched text
+                            const deleteStart = offset - matchLength
+                            Transforms.delete(editor, {
+                                at: {
+                                    anchor: { path: selection.anchor.path, offset: deleteStart - extraSpaceLength },
+                                    focus: { path: selection.anchor.path, offset: offset }
+                                }
+                            })
+
+                            if (isInsertingAtBeginningOfNode) {
+                                // Delete the space that was inserted at offset 0 of the original text node
+                                try {
+                                    Transforms.delete(editor, {
+                                        at: {
+                                            anchor: { path: selection.anchor.path, offset: 0 },
+                                            focus: { path: selection.anchor.path, offset: 1 }
+                                        }
+                                    })
+                                } catch (e) {
+                                    console.log("Could not delete inserted space:", e)
+                                }
+                            }
+                            
+                            // Move cursor to the new verse's inline container if the verse was created successfully
+                            if (newVersePath) {
+                                const newInlineContainerPath = newVersePath.concat(1, 0)
+                                Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+                                // Delete the space that was inserted at the beginning if needed
+                            }
+
+                            console.log("tree:", editor.children)
+
+                            return
                         }
                     }
-                    
+
                     // If either pattern matched, create the verse
                     if (verseNumber) {
                         const isCursorAtEndOfNode = offset >= currentNode[0].text.length
@@ -234,10 +293,10 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                             Transforms.select(editor, pointBeforeInsert)
                             extraSpaceLength = 1
                         }
-                                               
+
                         // Use the refactored function to create the verse and get the new verse path
                         const newVersePath = VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
-                        
+
                         // Delete the matched text
                         const deleteStart = offset - matchLength
                         Transforms.delete(editor, {
@@ -252,7 +311,7 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                             const newInlineContainerPath = newVersePath.concat(1, 0)
                             Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
                         }
-                        
+
                         return
                     }
                 }
