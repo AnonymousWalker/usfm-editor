@@ -138,7 +138,7 @@ const ChapterSelector: React.FC<ChapterSelectorProps> = ({
     chapterNumbers,
 }: ChapterSelectorProps) => {
     return (
-        <div className="usfm-editor-verse-selector usfm-editor-border-bottom">
+        <div className="usfm-editor-verse-selector usfm-editor-border-bottom" style={{ display: "none" }}>
             <FormControl variant="outlined" className="chapter-selector">
                 <Select
                     defaultValue={initialVerse.chapter}

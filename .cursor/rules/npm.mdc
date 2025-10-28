@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+This project uses npm (not pnpm) for executing npm scripts and package management.
