@@ -116,7 +116,7 @@ function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: str
     if (!selection) return null
 
     // Get the start of the selection
-    const selectionStart = Range.isBackward(selection)
+    let selectionStart = Range.isBackward(selection)
         ? selection.focus
         : selection.anchor
 
@@ -132,8 +132,34 @@ function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: str
         verseNumber = getNextVerseNumber(verse.children[0]).toString()
     }
 
+    // If the cursor is at the beginning of the current text node, insert a space at the selection
+    let insertedSpace = false
+    if (selectionStart.offset === 0) {
+        insertedSpace = true
+        Transforms.select(editor, selectionStart)
+        Transforms.insertText(editor, " ")
+        // Move cursor one position to the right after inserting the space
+        const pointAfterInsert: Point = { path: selectionStart.path, offset: selectionStart.offset + 1 }
+        Transforms.select(editor, pointAfterInsert)
+        // Update selectionStart for the subsequent addVerseAtPoint call
+        selectionStart = pointAfterInsert
+    }
+
     // Call the main function with the selection start point and verse number
-    return addVerseAtPoint(editor, selectionStart, verseNumber)
+    const result = addVerseAtPoint(editor, selectionStart, verseNumber)
+    
+    // If we inserted a space, remove it now
+    if (insertedSpace) {
+        const originalPoint: Point = { path: selectionStart.path, offset: 0 }
+        Transforms.delete(editor, {
+            at: {
+                anchor: originalPoint,
+                focus: { path: selectionStart.path, offset: 1 }
+            }
+        })
+    }
+    
+    return result
 }
 
 function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): Path | null {
