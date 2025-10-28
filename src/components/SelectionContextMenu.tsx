@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useSlate, ReactEditor } from "slate-react"
+import { Editor } from "slate"
 import { MyEditor } from "../plugins/helpers/MyEditor"
 import Popper from "@material-ui/core/Popper"
 import ClickAwayListener from "@material-ui/core/ClickAwayListener"
@@ -100,7 +101,17 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
                         offset: 0
                     }
                 }
-                positionsToAdd.push(modifiedSelection)
+
+                // Only add to positionsToAdd if the parent node has type === 'p'
+                try {
+                    const parentPath = [...anchorPath.slice(0, 2), i]
+                    const [parentNode] = Editor.node(editor, parentPath)
+                    if (parentNode && 'type' in parentNode && parentNode.type === 'p') {
+                        positionsToAdd.push(modifiedSelection)
+                    }
+                } catch (_) {
+                    // Skip this position if we can't access the parent node
+                }
             }
 
             console.log("positions to add:", JSON.stringify(positionsToAdd, null, 2))
