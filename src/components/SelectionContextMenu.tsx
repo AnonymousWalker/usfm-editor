@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useSlate, ReactEditor } from "slate-react"
-import { Editor } from "slate"
+import { Editor, Transforms } from "slate"
 import { MyEditor } from "../plugins/helpers/MyEditor"
 import Popper from "@material-ui/core/Popper"
 import ClickAwayListener from "@material-ui/core/ClickAwayListener"
@@ -53,7 +53,19 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
 
     const handleAddVerse = () => {
         if (!editor.selection) return
-        VerseTransforms.addVerseAtSelection(editor, editor.selection)
+        const newVersePath = VerseTransforms.addVerseAtSelection(editor, editor.selection)
+
+        // Move cursor to the new verse's inline container if the verse was created successfully
+        if (newVersePath) {
+            Transforms.select(editor, Editor.start(editor, newVersePath.concat(0)))
+            // Use requestAnimationFrame to ensure the DOM updates before focusing
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    ReactEditor.focus(editor)
+                    Transforms.select(editor, Editor.start(editor, newVersePath.concat(0)))
+                })
+            })
+        }
 
         handleClose()
         ReactEditor.focus(editor)
