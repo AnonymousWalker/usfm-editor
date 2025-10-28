@@ -139,15 +139,26 @@ export function handleTabKeyForSuggestion(
         if (verseNumberMatch) {
             const verseNumber = verseNumberMatch[0]
             
-            // Use the refactored function to create the verse and get the new verse path
-            if (editor.selection) {
-                const newVersePath = VerseTransforms.addVerseAtPoint(editor, editor.selection.anchor, verseNumber)
-                
-                // Move cursor to the new verse's inline container if the verse was created successfully
-                if (newVersePath) {
-                    const newInlineContainerPath = newVersePath.concat(1, 0)
-                    Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+            // If the cursor is at the end of the current text node, insert a space and restore cursor
+            // This mirrors the workaround used in keyHandlers to avoid wrapping next line into the same paragraph
+            const currentNodeAtPoint = Editor.node(editor, selection.anchor.path)
+            if (currentNodeAtPoint && Text.isText(currentNodeAtPoint[0])) {
+                const endOffset = selection.anchor.offset
+                const isCursorAtEndOfNode = endOffset >= currentNodeAtPoint[0].text.length
+                if (isCursorAtEndOfNode) {
+                    const pointBeforeInsert = selection.anchor
+                    Transforms.insertText(editor, " ")
+                    Transforms.select(editor, pointBeforeInsert)
                 }
+            }
+
+            // Use the refactored function to create the verse and get the new verse path
+            const newVersePath = VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
+            
+            // Move cursor to the new verse's inline container if the verse was created successfully
+            if (newVersePath) {
+                const newInlineContainerPath = newVersePath.concat(1, 0)
+                Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
             }
             
             // Delete the backslash (and any partial text like "\v")
