@@ -225,6 +225,15 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                     
                     // If either pattern matched, create the verse
                     if (verseNumber) {
+                        const isCursorAtEndOfNode = offset >= currentNode[0].text.length
+                        let extraSpaceLength = 0
+                        if (isCursorAtEndOfNode) {
+                            // workaround for inserting verse at the end of a paragraph, it should not wrap the next line into the same paragraph
+                            const pointBeforeInsert = selection.anchor
+                            Transforms.insertText(editor, " ")
+                            Transforms.select(editor, pointBeforeInsert)
+                            extraSpaceLength = 1
+                        }
                                                
                         // Use the refactored function to create the verse and get the new verse path
                         const newVersePath = VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
