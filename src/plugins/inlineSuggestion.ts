@@ -125,68 +125,74 @@ export function handleTabKeyForSuggestion(
     if (event.key !== "Tab") return false
 
     const state = getSuggestionState(editor)
-    if (!state.suggestion || !state.range) return false
-
+    
     // Prevent default tab behavior
     event.preventDefault()
 
     const { selection } = editor
     if (selection && Range.isCollapsed(selection)) {
-        // Extract verse number from suggestion
-        // Suggestion formats: "v 6 ", "6 ", "v ", " "
-        const verseNumberMatch = state.suggestion.match(/\d+/)
-        
-        if (verseNumberMatch) {
-            const verseNumber = verseNumberMatch[0]
+        // Check if there's a suggestion
+        if (state.suggestion && state.range) {
+            // Extract verse number from suggestion
+            // Suggestion formats: "v 6 ", "6 ", "v ", " "
+            const verseNumberMatch = state.suggestion.match(/\d+/)
             
-            // If the cursor is at the end of the current text node, insert a space and restore cursor
-            // This mirrors the workaround used in keyHandlers to avoid wrapping next line into the same paragraph
-            const currentNodeAtPoint = Editor.node(editor, selection.anchor.path)
-            if (currentNodeAtPoint && Text.isText(currentNodeAtPoint[0])) {
-                const endOffset = selection.anchor.offset
-                const isCursorAtEndOfNode = endOffset >= currentNodeAtPoint[0].text.length
-                if (isCursorAtEndOfNode) {
-                    const pointBeforeInsert = selection.anchor
-                    Transforms.insertText(editor, " ")
-                    Transforms.select(editor, pointBeforeInsert)
-                }
-            }
-
-            // Use the refactored function to create the verse and get the new verse path
-            const newVersePath = VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
-            
-            // Move cursor to the new verse's inline container if the verse was created successfully
-            if (newVersePath) {
-                const newInlineContainerPath = newVersePath.concat(1, 0)
-                Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
-            }
-            
-            // Delete the backslash (and any partial text like "\v")
-            const currentNode = Editor.node(editor, selection.anchor.path)
-            if (currentNode && Text.isText(currentNode[0])) {
-                const textContent = currentNode[0].text
-                const offset = selection.anchor.offset
-                const textBeforeCursor = textContent.substring(0, offset)
+            if (verseNumberMatch) {
+                const verseNumber = verseNumberMatch[0]
                 
-                // Find and delete the backslash pattern
-                const backslashMatch = textBeforeCursor.match(/\\[a-z]*$/i)
-                if (backslashMatch) {
-                    const deleteStart = offset - backslashMatch[0].length
-                    Transforms.delete(editor, {
-                        at: {
-                            anchor: { path: selection.anchor.path, offset: deleteStart },
-                            focus: { path: selection.anchor.path, offset: offset }
-                        }
-                    })
+                // If the cursor is at the end of the current text node, insert a space and restore cursor
+                // This mirrors the workaround used in keyHandlers to avoid wrapping next line into the same paragraph
+                const currentNodeAtPoint = Editor.node(editor, selection.anchor.path)
+                if (currentNodeAtPoint && Text.isText(currentNodeAtPoint[0])) {
+                    const endOffset = selection.anchor.offset
+                    const isCursorAtEndOfNode = endOffset >= currentNodeAtPoint[0].text.length
+                    if (isCursorAtEndOfNode) {
+                        const pointBeforeInsert = selection.anchor
+                        Transforms.insertText(editor, " ")
+                        Transforms.select(editor, pointBeforeInsert)
+                    }
                 }
+
+                // Use the refactored function to create the verse and get the new verse path
+                const newVersePath = VerseTransforms.addVerseAtPoint(editor, selection.anchor, verseNumber)
+                
+                // Move cursor to the new verse's inline container if the verse was created successfully
+                if (newVersePath) {
+                    const newInlineContainerPath = newVersePath.concat(1, 0)
+                    Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+                }
+                
+                // Delete the backslash (and any partial text like "\v")
+                const currentNode = Editor.node(editor, selection.anchor.path)
+                if (currentNode && Text.isText(currentNode[0])) {
+                    const textContent = currentNode[0].text
+                    const offset = selection.anchor.offset
+                    const textBeforeCursor = textContent.substring(0, offset)
+                    
+                    // Find and delete the backslash pattern
+                    const backslashMatch = textBeforeCursor.match(/\\[a-z]*$/i)
+                    if (backslashMatch) {
+                        const deleteStart = offset - backslashMatch[0].length
+                        Transforms.delete(editor, {
+                            at: {
+                                anchor: { path: selection.anchor.path, offset: deleteStart },
+                                focus: { path: selection.anchor.path, offset: offset }
+                            }
+                        })
+                    }
+                }
+                
+                clearSuggestion(editor)
+                return true
+            } else {
+                // No verse number in suggestion, just insert the text
+                Transforms.insertText(editor, state.suggestion)
+                clearSuggestion(editor)
+                return true
             }
-            
-            clearSuggestion(editor)
-            return true
         } else {
-            // No verse number in suggestion, just insert the text
-            Transforms.insertText(editor, state.suggestion)
-            clearSuggestion(editor)
+            // No suggestion, insert double space
+            Transforms.insertText(editor, "\"")
             return true
         }
     }
