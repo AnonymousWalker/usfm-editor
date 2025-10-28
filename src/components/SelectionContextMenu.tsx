@@ -36,7 +36,7 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         if (domSelection && domSelection.rangeCount > 0) {
             const domRange = domSelection.getRangeAt(0)
             const rect = domRange.getBoundingClientRect()
-            
+
             // Create a temporary element at the selection position for anchoring
             const tempEl = document.createElement("div")
             tempEl.style.position = "absolute"
@@ -68,34 +68,33 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
         }
 
         handleClose()
-        ReactEditor.focus(editor)
 
     }
 
     const handleAutoFillMarkers = () => {
         if (!editor.selection) return
-        
+
         // Calculate paragraph breaks based on the difference in the third index of anchor and focus paths
         const anchorPath = editor.selection.anchor.path
         const focusPath = editor.selection.focus.path
-        
+
         console.log("anchor path:", anchorPath)
         console.log("focus path:", focusPath)
-        
+
         // Check if both paths have at least 3 elements (third index is index 2)
         if (anchorPath.length >= 3 && focusPath.length >= 3) {
             const anchorThirdIndex = anchorPath[2]
             const focusThirdIndex = focusPath[2]
             const paragraphBreaks = Math.abs(anchorThirdIndex - focusThirdIndex)
-            
+
             console.log(`Third index - Anchor: ${anchorThirdIndex}, Focus: ${focusThirdIndex}`)
             console.log(`Paragraph breaks: ${paragraphBreaks}`)
-            
+
             // Determine the direction (ascending or descending)
             const isAscending = focusThirdIndex > anchorThirdIndex
             const startIndex = isAscending ? anchorThirdIndex : focusThirdIndex
             const endIndex = isAscending ? focusThirdIndex : anchorThirdIndex
-            
+
             const positionsToAdd = []
 
             // Generate selections for each increment
@@ -127,26 +126,26 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
             }
 
             console.log("positions to add:", JSON.stringify(positionsToAdd, null, 2))
-            
+
             // Get the starting verse number from the selection start point
             const selectionStartPoint = isAscending ? editor.selection.anchor : editor.selection.focus
             const verseNodeEntry = MyEditor.getVerseNode(editor, selectionStartPoint.path)
             if (verseNodeEntry) {
                 const [verse] = verseNodeEntry
                 const currentVerseNum = VerseTransforms.getNextVerseNumber(verse.children[0])
-                
+
                 // Call addVerseAtSelection for each position in reverse order (bottom up)
                 // with decreasing verse numbers, so that it doesn't affect the verse above
                 positionsToAdd.reverse().forEach((pos, index) => {
                     const verseNum = (currentVerseNum + positionsToAdd.length - index - 1).toString()
                     VerseTransforms.addVerseAtSelection(editor, pos, verseNum)
                 })
-                
+
                 console.log(`Added ${paragraphBreaks} markers`)
             }
-            
-        }        
-        
+
+        }
+
         handleClose()
         ReactEditor.focus(editor)
     }
