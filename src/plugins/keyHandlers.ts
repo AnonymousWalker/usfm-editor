@@ -63,9 +63,9 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                     // Check if there's a previous verse to merge into
                     const prevVerse = MyEditor.getPreviousVerse(editor, versePath)
                     if (prevVerse) {
+                        const [prevVerseNode, prevVersePath] = prevVerse
                         // Capture the length of the previous verse's text before merging
-                        const prevVersePath = prevVerse[1]
-                        const prevInlineContainerPath = prevVersePath.concat(1)
+                        const prevInlineContainerPath = prevVersePath.concat(prevVerseNode.children.length - 1)
                         let prevTextLength = 0
                         try {
                             const [prevInlineContainer] = Editor.node(
@@ -82,9 +82,8 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                             editor,
                             verseNumPath
                         )
-                        // After merge, place cursor at the offset equal to the previous text length
+                        // After merge, move cursor to the position with offset equal to the previous text length
                         try {
-                            // Start at the beginning of the previous inline container
                             Transforms.select(
                                 editor,
                                 Editor.start(editor, prevInlineContainerPath)
