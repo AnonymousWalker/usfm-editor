@@ -136,7 +136,7 @@ const Headers = (props: RenderElementProps) => {
 }
 const Verse = (props: RenderElementProps) => {
     const empty =
-        Node.string(props.element) === Node.string(props.element.children[0])
+        Node.string(props.element).trim() === Node.string(props.element.children[0]).trim()
             ? " usfm-editor-empty-verse"
             : ""
     return (
