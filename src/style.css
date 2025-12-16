@@ -92,6 +92,32 @@ hr.usfm-editor-hr {
 }
 
 .usfm-editor-verse {
+    position: relative;
+}
+
+.usfm-editor-verse-tooltip {
+    padding: 6px 10px;
+    background-color: #000000;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.8em;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
+    line-height: 1.5;
+    display: inline-block;
+}
+
+.usfm-editor-verse-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #000000;
 }
 
 /* Italics are accomplished via the <cite> tag so that

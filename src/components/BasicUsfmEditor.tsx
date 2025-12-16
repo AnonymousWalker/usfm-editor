@@ -52,6 +52,8 @@ import NodeRules from "../utils/NodeRules"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
 import NodeTypes from "../utils/NodeTypes"
 import { SelectionContextMenu } from "./SelectionContextMenu"
+import { VerseTooltip } from "./VerseTooltip"
+import { VerseTooltipProvider } from "./VerseTooltipContext"
 
 export const createBasicUsfmEditor =
     (): ForwardRefUsfmEditor<BasicUsfmEditor> => {
@@ -67,8 +69,7 @@ export const createBasicUsfmEditor =
  */
 export class BasicUsfmEditor
     extends React.Component<UsfmEditorProps, BasicUsfmEditorState>
-    implements UsfmEditorRef
-{
+    implements UsfmEditorRef {
     public static propTypes = usfmEditorPropTypes
     public static defaultProps = usfmEditorDefaultProps
 
@@ -81,6 +82,9 @@ export class BasicUsfmEditor
             selectedVerse: undefined,
             prevUsfmStringProp: props.usfmString,
             showSelectionMenu: false,
+            verseTooltipAnchorEl: null,
+            verseTooltipText: undefined,
+            verseTooltipOpen: false,
         }
 
         this.slateEditor = flowRight(
@@ -107,6 +111,9 @@ export class BasicUsfmEditor
             value: usfmToSlate(props.usfmString),
             prevUsfmStringProp: props.usfmString,
             showSelectionMenu: false,
+            verseTooltipAnchorEl: null,
+            verseTooltipText: undefined,
+            verseTooltipOpen: false,
         }
     }
 
@@ -206,10 +213,10 @@ export class BasicUsfmEditor
         const selection = this.slateEditor.selection
         const hasExpandedSelection =
             !!selection && !Range.isCollapsed(selection)
-        
+
         // Only show menu if there's an expanded selection in an editable area
         const shouldShow = hasExpandedSelection && !this.props.readOnly
-        
+
         if (this.state.showSelectionMenu !== shouldShow) {
             this.setState({ showSelectionMenu: shouldShow })
         }
@@ -217,6 +224,19 @@ export class BasicUsfmEditor
 
     handleCloseSelectionMenu = (): void => {
         this.setState({ showSelectionMenu: false })
+    }
+
+    showVerseTooltip = (anchorEl: HTMLElement, text: string): void => {
+        this.setState({
+            verseTooltipAnchorEl: anchorEl,
+            verseTooltipText: text,
+            verseTooltipOpen: true,
+        })
+    }
+
+    hideVerseTooltip = (): void => {
+        if (!this.state.verseTooltipOpen) return
+        this.setState({ verseTooltipOpen: false })
     }
 
     scheduleOnChange = debounce((newValue: Node[]) => {
@@ -421,27 +441,39 @@ export class BasicUsfmEditor
             Transforms.deselect(this.slateEditor)
         }
         return (
-            <Slate
-                editor={this.slateEditor}
-                value={this.state.value}
-                onChange={this.handleChange}
+            <VerseTooltipProvider
+                value={{
+                    showTooltip: this.showVerseTooltip,
+                    hideTooltip: this.hideVerseTooltip,
+                }}
             >
-                <Editable
-                    readOnly={this.props.readOnly}
-                    renderElement={renderElementByType}
-                    renderLeaf={renderLeafByProps}
-                    decorate={this.decorate}
-                    spellCheck={false}
-                    onKeyDown={this.onKeyDown}
-                    onKeyUp={this.onKeyUp}
-                    onMouseUp={this.onMouseUp}
-                    className={"usfm-editor"}
-                />
-                <SelectionContextMenu
-                    open={this.state.showSelectionMenu}
-                    handleClose={this.handleCloseSelectionMenu}
-                />
-            </Slate>
+                <Slate
+                    editor={this.slateEditor}
+                    value={this.state.value}
+                    onChange={this.handleChange}
+                >
+                    <Editable
+                        readOnly={this.props.readOnly}
+                        renderElement={renderElementByType}
+                        renderLeaf={renderLeafByProps}
+                        decorate={this.decorate}
+                        spellCheck={false}
+                        onKeyDown={this.onKeyDown}
+                        onKeyUp={this.onKeyUp}
+                        onMouseUp={this.onMouseUp}
+                        className={"usfm-editor"}
+                    />
+                    <SelectionContextMenu
+                        open={this.state.showSelectionMenu}
+                        handleClose={this.handleCloseSelectionMenu}
+                    />
+                    <VerseTooltip
+                        anchorEl={this.state.verseTooltipAnchorEl}
+                        open={this.state.verseTooltipOpen}
+                        text={this.state.verseTooltipText}
+                    />
+                </Slate>
+            </VerseTooltipProvider>
         )
     }
 }
@@ -451,6 +483,9 @@ interface BasicUsfmEditorState {
     selectedVerse?: Verse
     prevUsfmStringProp: string
     showSelectionMenu: boolean
+    verseTooltipAnchorEl: HTMLElement | null
+    verseTooltipText?: string
+    verseTooltipOpen: boolean
 }
 
 interface VerseStartAndEnd {

@@ -4,6 +4,10 @@ import { VerseNumberWithVerseMenu } from "../components/VerseNumber"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
 import NodeTypes from "../utils/NodeTypes"
 import { RenderElementProps, RenderLeafProps } from "slate-react"
+import {
+    VerseTooltipContext,
+    VerseTooltipContextType,
+} from "../components/VerseTooltipContext"
 
 export function renderLeafByProps(props: RenderLeafProps): JSX.Element {
     const type = props.leaf[UsfmMarkers.SPECIAL_TEXT.bk] ? "cite" : "span"
@@ -135,6 +139,11 @@ const Headers = (props: RenderElementProps) => {
     )
 }
 const Verse = (props: RenderElementProps) => {
+    const verseRef = React.useRef<HTMLSpanElement>(null)
+    const { showTooltip, hideTooltip } = React.useContext(
+        VerseTooltipContext
+    ) as VerseTooltipContextType
+
     const empty =
         Node.string(props.element).trim() ===
             Node.string(props.element.children[0]).trim()
@@ -147,18 +156,40 @@ const Verse = (props: RenderElementProps) => {
         ? Node.string(verseNumberElement).trim()
         : ""
 
-    const tooltip =
+    const tooltipText =
         empty && verseNumber
             ? `Verse ${verseNumber} is missing content`
             : empty
                 ? "Verse is missing content"
                 : undefined
 
+    const handleMouseEnter = () => {
+        if (!tooltipText || !verseRef.current) return
+        showTooltip(verseRef.current, tooltipText)
+    }
+
+    const handleMouseLeave = () => {
+        hideTooltip()
+    }
+
+    const handleClick = (event: React.MouseEvent<HTMLSpanElement>) => {
+        // If clicking directly on the verse element (not a child), prevent Slate from processing it
+        // This prevents the "Cannot resolve a Slate node" error
+        const targetEl = event.target as HTMLElement | null
+        if (targetEl === event.currentTarget) {
+            event.preventDefault()
+            event.stopPropagation()
+        }
+    }
+
     return (
         <span
             {...props.attributes}
+            ref={verseRef}
             className={"usfm-editor-verse" + empty}
-            title={tooltip}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
         >
             {props.children}
         </span>

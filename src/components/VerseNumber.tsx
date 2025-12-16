@@ -1,18 +1,17 @@
 import * as React from "react"
 import {
     useRef,
-    useState,
-    useEffect,
-    useContext,
-    useMemo,
     forwardRef,
+    useContext,
+    useCallback,
 } from "react"
-import { VerseNumberMenu, willVerseMenuDisplay } from "./VerseNumberMenu"
 import { numberClassNames } from "../transforms/usfmRenderer"
+import { Node, Element, Editor } from "slate"
 import { useSlate, ReactEditor } from "slate-react"
-import { OptionsContext } from "../OptionsContext"
-import { Node, Transforms } from "slate"
 import { SelectionSeparator } from "./SelectionSeparator"
+import { VerseTooltipContext } from "./VerseTooltipContext"
+import { MyEditor } from "../plugins/helpers/MyEditor"
+import NodeTypes from "../utils/NodeTypes"
 
 type VerseNumberProps = {
     element: Node
@@ -39,79 +38,76 @@ export const VerseNumber: React.FC<VerseNumberProps> = forwardRef(
 
 VerseNumber.displayName = "VerseNumber"
 
-function withVerseMenu<P>(VerseNum: React.FC<P>) {
+function withVerseTooltip<P extends VerseNumberProps>(
+    VerseNum: React.FC<P>
+) {
     const fc = function (props: P) {
-        const { useVerseAddRemove } = useContext(OptionsContext)
         const verseNumberRef = useRef<HTMLElement>(null)
+        const { showTooltip, hideTooltip } = useContext(VerseTooltipContext)
         const editor = useSlate()
-        const [open, setOpen] = useState(false)
-        if (ReactEditor.isReadOnly(editor) && open) {
-            setOpen(false)
-        }
 
-        const handleToggle = useMemo(
-            () => (event: React.MouseEvent) => {
-                if (ReactEditor.isReadOnly(editor)) return
-                if (!open) {
-                    // The menu is about to be opened.
-                    // Do not allow a selection to be made adjacent to the verse number.
-                    event.preventDefault()
-                    // Selection should be null when the verse menu opens.
-                    Transforms.deselect(editor)
-                }
-                setOpen(!open)
-            },
-            []
-        )
+        // Get the verse number text from the element
+        const verseNumberText = Node.string(props.element).trim()
 
-        const [hasMenu, setHasMenu] = useState(false)
+        const handleMouseEnter = useCallback(() => {
+            if (!verseNumberRef.current || !verseNumberText) return
 
-        // When the verse number is mounted, calculate whether the menu will have
-        // available actions. When a verse transformation occurs that involves this verse,
-        // "hasMenu" must be updated. We rely upon the verse transformation functions to
-        // replace the verse number node (not just its text) to trigger this effect.
-        useEffect(() => {
-            const verseNumberElement = verseNumberRef.current
-            if (verseNumberElement)
-                setHasMenu(
-                    willVerseMenuDisplay(
+            // Use setTimeout to avoid interfering with Slate's click handling
+            setTimeout(() => {
+                if (!verseNumberRef.current) return
+
+                // Find the parent verse node to check if it's empty
+                let isVerseEmpty = false
+                try {
+                    // Get the path directly from the Slate node element
+                    const verseNumberPath = ReactEditor.findPath(editor, props.element)
+
+                    // Verify the path is valid
+                    if (!Editor.hasPath(editor, verseNumberPath)) {
+                        return
+                    }
+                    const verseNodeEntry = MyEditor.getVerseNode(
                         editor,
-                        verseNumberElement,
-                        useVerseAddRemove
+                        verseNumberPath
                     )
-                )
-        }, [])
+
+                    if (
+                        verseNodeEntry &&
+                        Element.isElement(verseNodeEntry[0]) &&
+                        verseNodeEntry[0].type === NodeTypes.VERSE
+                    ) {
+                        isVerseEmpty =
+                            Node.string(verseNodeEntry[0]).trim() ===
+                            Node.string(verseNodeEntry[0].children[0]).trim()
+                    }
+                } catch (error) {
+                    // If we can't find the verse node, default to not empty
+                    // Silently fail - this can happen during editor updates or when clicking
+                    return
+                }
+
+                // Only show tooltip for empty verses
+                if (!isVerseEmpty) return
+
+                showTooltip(verseNumberRef.current, `Verse ${verseNumberText} is missing content`)
+            }, 0)
+        }, [editor, props.element, verseNumberText, showTooltip])
+
+        const handleMouseLeave = useCallback(() => {
+            hideTooltip()
+        }, [hideTooltip])
 
         return (
-            <React.Fragment>
-                <VerseNum
-                    {...props}
-                    style={{
-                        cursor:
-                            hasMenu && !ReactEditor.isReadOnly(editor)
-                                ? "pointer"
-                                : "",
-                    }}
-                    // We will use event.preventDefault() to stop the editor from
-                    // selecting an adjacent text node even though the verse number
-                    // was clicked. Since selections are set "on mouse down", we need
-                    // to use "onMouseDown" here.
-                    onMouseDown={handleToggle}
-                    ref={verseNumberRef}
-                />
-                {/* {hasMenu && verseNumberRef.current && (
-                    <VerseNumberMenu
-                        verseNumberEl={verseNumberRef.current}
-                        open={open}
-                        handleClose={() => setOpen(false)}
-                        useVerseAddRemove={useVerseAddRemove}
-                    />
-                )} */}
-            </React.Fragment>
+            <VerseNum
+                {...props}
+                ref={verseNumberRef}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+            />
         )
     }
-    fc.displayName = (VerseNum.displayName ?? "") + "WithVerseMenu"
+    fc.displayName = (VerseNum.displayName ?? "") + "WithVerseTooltip"
     return fc
 }
 
-export const VerseNumberWithVerseMenu = withVerseMenu(VerseNumber)
+export const VerseNumberWithVerseMenu = withVerseTooltip(VerseNumber)
