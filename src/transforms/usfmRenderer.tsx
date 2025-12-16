@@ -136,11 +136,30 @@ const Headers = (props: RenderElementProps) => {
 }
 const Verse = (props: RenderElementProps) => {
     const empty =
-        Node.string(props.element).trim() === Node.string(props.element.children[0]).trim()
+        Node.string(props.element).trim() ===
+            Node.string(props.element.children[0]).trim()
             ? " usfm-editor-empty-verse"
             : ""
+
+    // Verse number is stored in the first child element of the verse node.
+    const verseNumberElement = (props.element as any).children?.[0]
+    const verseNumber = verseNumberElement
+        ? Node.string(verseNumberElement).trim()
+        : ""
+
+    const tooltip =
+        empty && verseNumber
+            ? `Verse ${verseNumber} is missing content`
+            : empty
+                ? "Verse is missing content"
+                : undefined
+
     return (
-        <span {...props.attributes} className={"usfm-editor-verse" + empty}>
+        <span
+            {...props.attributes}
+            className={"usfm-editor-verse" + empty}
+            title={tooltip}
+        >
             {props.children}
         </span>
     )
