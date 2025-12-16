@@ -9,6 +9,53 @@ import {
     VerseTooltipContextType,
 } from "../components/VerseTooltipContext"
 
+const PatternHighlightedText = (props: RenderLeafProps) => {
+    const { showTooltip, hideTooltip } = React.useContext(
+        VerseTooltipContext
+    ) as VerseTooltipContextType
+    const textRef = React.useRef<HTMLElement>(null)
+
+    // Extract the pattern match from the text (should be the full leaf text since decorations split nodes)
+    const patternText = props.leaf.text || ""
+    // Find the actual pattern match in case the leaf contains more than just the match
+    const PATTERN = /\d+\w+/g
+    const match = patternText.match(PATTERN)
+    const matchedText = match ? match[0] : patternText
+
+    const handleMouseEnter = React.useCallback(() => {
+        if (!textRef.current || !matchedText) return
+        // Use setTimeout similar to verse tooltip to avoid interfering with Slate
+        setTimeout(() => {
+            if (!textRef.current) return
+            showTooltip(textRef.current, `Space is expected or something...?`)
+        }, 0)
+    }, [matchedText, showTooltip])
+
+    const handleMouseLeave = React.useCallback(() => {
+        hideTooltip()
+    }, [hideTooltip])
+
+    const type = props.leaf[UsfmMarkers.SPECIAL_TEXT.bk] ? "cite" : "span"
+    let className = ""
+    if (props.leaf[UsfmMarkers.SPECIAL_TEXT.nd])
+        className = className + "usfm-marker-nd "
+    if (props.leaf[UsfmMarkers.SPECIAL_TEXT.bk])
+        className = className + "usfm-marker-bk "
+    className = className + "usfm-editor-error-highlight "
+
+    return React.createElement(
+        type,
+        {
+            ...props.attributes,
+            ref: textRef,
+            className: className.trim(),
+            onMouseEnter: handleMouseEnter,
+            onMouseLeave: handleMouseLeave,
+        },
+        props.children
+    )
+}
+
 export function renderLeafByProps(props: RenderLeafProps): JSX.Element {
     const type = props.leaf[UsfmMarkers.SPECIAL_TEXT.bk] ? "cite" : "span"
 
@@ -21,7 +68,7 @@ export function renderLeafByProps(props: RenderLeafProps): JSX.Element {
     // Handle pattern highlighting
     const isPatternMatch = (props.leaf as any).isPatternMatch
     if (isPatternMatch) {
-        className = className + "usfm-editor-pattern-highlight "
+        return <PatternHighlightedText {...props} />
     }
 
     // Handle inline suggestions

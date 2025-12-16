@@ -4,7 +4,7 @@ import { Range, Editor, Text, NodeEntry } from "slate"
 const PATTERN = /\d[a-zA-Z]/g
 
 /**
- * Decorate function to highlight text matching the pattern \d+\w+
+ * Decorate function to highlight text matching the PATTERN
  * This finds all matches in text nodes and returns ranges for highlighting
  */
 export function decorateWithPatternHighlight(

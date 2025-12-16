@@ -204,7 +204,7 @@ hr.usfm-editor-hr {
     -ms-user-select: none;
 }
 
-.usfm-editor-pattern-highlight {
+.usfm-editor-error-highlight {
     /* Red "error" wavy underline for pattern matches */
     text-decoration-line: underline;
     text-decoration-style: wavy;
