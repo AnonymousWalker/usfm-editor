@@ -203,3 +203,11 @@ hr.usfm-editor-hr {
     -webkit-user-select: none;
     -ms-user-select: none;
 }
+
+.usfm-editor-pattern-highlight {
+    /* Red "error" wavy underline for pattern matches */
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: #e53935;
+    text-decoration-thickness: 1px;
+}

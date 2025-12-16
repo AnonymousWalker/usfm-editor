@@ -28,6 +28,7 @@ import {
     handleTabKeyForSuggestion,
     decorateWithSuggestion,
 } from "../plugins/inlineSuggestion"
+import { decorateWithPatternHighlight } from "../plugins/patternHighlight"
 import { slateToUsfm } from "../transforms/slateToUsfm"
 import { debounce, flowRight, isEqual } from "lodash"
 import { MyTransforms } from "../plugins/helpers/MyTransforms"
@@ -270,7 +271,9 @@ export class BasicUsfmEditor
     }
 
     decorate = (entry: NodeEntry): Range[] => {
-        return decorateWithSuggestion(this.slateEditor, entry)
+        const suggestionRanges = decorateWithSuggestion(this.slateEditor, entry)
+        const patternRanges = decorateWithPatternHighlight(this.slateEditor, entry)
+        return [...suggestionRanges, ...patternRanges]
     }
 
     fixSelectionOnChapterOrVerseNumber(): void {

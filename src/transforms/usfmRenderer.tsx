@@ -18,6 +18,12 @@ export function renderLeafByProps(props: RenderLeafProps): JSX.Element {
     if (props.leaf[UsfmMarkers.SPECIAL_TEXT.bk])
         className = className + "usfm-marker-bk "
 
+    // Handle pattern highlighting
+    const isPatternMatch = (props.leaf as any).isPatternMatch
+    if (isPatternMatch) {
+        className = className + "usfm-editor-pattern-highlight "
+    }
+
     // Handle inline suggestions
     const suggestion = (props.leaf as any).suggestion
     const isSuggestion = (props.leaf as any).isSuggestion
