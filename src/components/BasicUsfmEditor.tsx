@@ -55,6 +55,8 @@ import NodeTypes from "../utils/NodeTypes"
 import { SelectionContextMenu } from "./SelectionContextMenu"
 import { VerseTooltip } from "./VerseTooltip"
 import { VerseTooltipProvider } from "./VerseTooltipContext"
+import { EditorContextMenu } from "./EditorContextMenu"
+import { EditorContextMenuProvider } from "./EditorContextMenuContext"
 
 export const createBasicUsfmEditor =
     (): ForwardRefUsfmEditor<BasicUsfmEditor> => {
@@ -86,6 +88,9 @@ export class BasicUsfmEditor
             verseTooltipAnchorEl: null,
             verseTooltipText: undefined,
             verseTooltipOpen: false,
+            editorContextMenuOpen: false,
+            editorContextMenuAnchorEl: null,
+            editorContextMenuPosition: undefined,
         }
 
         this.slateEditor = flowRight(
@@ -115,6 +120,9 @@ export class BasicUsfmEditor
             verseTooltipAnchorEl: null,
             verseTooltipText: undefined,
             verseTooltipOpen: false,
+            editorContextMenuOpen: false,
+            editorContextMenuAnchorEl: null,
+            editorContextMenuPosition: undefined,
         }
     }
 
@@ -238,6 +246,30 @@ export class BasicUsfmEditor
     hideVerseTooltip = (): void => {
         if (!this.state.verseTooltipOpen) return
         this.setState({ verseTooltipOpen: false })
+    }
+
+    showEditorContextMenu = (anchorEl: HTMLElement | null, position?: { x: number; y: number }): void => {
+        this.setState({
+            editorContextMenuOpen: true,
+            editorContextMenuAnchorEl: anchorEl,
+            editorContextMenuPosition: position,
+        })
+    }
+
+    hideEditorContextMenu = (): void => {
+        this.setState({
+            editorContextMenuOpen: false,
+            editorContextMenuAnchorEl: null,
+            editorContextMenuPosition: undefined,
+        })
+    }
+
+    onContextMenu = (event: React.MouseEvent<HTMLDivElement>): void => {
+        if (this.props.readOnly) return
+
+        event.preventDefault()
+        const position = { x: event.clientX, y: event.clientY }
+        this.showEditorContextMenu(null, position)
     }
 
     scheduleOnChange = debounce((newValue: Node[]) => {
@@ -450,32 +482,45 @@ export class BasicUsfmEditor
                     hideTooltip: this.hideVerseTooltip,
                 }}
             >
-                <Slate
-                    editor={this.slateEditor}
-                    value={this.state.value}
-                    onChange={this.handleChange}
+                <EditorContextMenuProvider
+                    value={{
+                        showContextMenu: this.showEditorContextMenu,
+                        hideContextMenu: this.hideEditorContextMenu,
+                    }}
                 >
-                    <Editable
-                        readOnly={this.props.readOnly}
-                        renderElement={renderElementByType}
-                        renderLeaf={renderLeafByProps}
-                        decorate={this.decorate}
-                        spellCheck={false}
-                        onKeyDown={this.onKeyDown}
-                        onKeyUp={this.onKeyUp}
-                        onMouseUp={this.onMouseUp}
-                        className={"usfm-editor"}
-                    />
-                    <SelectionContextMenu
-                        open={this.state.showSelectionMenu}
-                        handleClose={this.handleCloseSelectionMenu}
-                    />
-                    <VerseTooltip
-                        anchorEl={this.state.verseTooltipAnchorEl}
-                        open={this.state.verseTooltipOpen}
-                        text={this.state.verseTooltipText}
-                    />
-                </Slate>
+                    <Slate
+                        editor={this.slateEditor}
+                        value={this.state.value}
+                        onChange={this.handleChange}
+                    >
+                        <Editable
+                            readOnly={this.props.readOnly}
+                            renderElement={renderElementByType}
+                            renderLeaf={renderLeafByProps}
+                            decorate={this.decorate}
+                            spellCheck={false}
+                            onKeyDown={this.onKeyDown}
+                            onKeyUp={this.onKeyUp}
+                            onMouseUp={this.onMouseUp}
+                            onContextMenu={this.onContextMenu}
+                            className={"usfm-editor"}
+                        />
+                        <SelectionContextMenu
+                            open={this.state.showSelectionMenu}
+                            handleClose={this.handleCloseSelectionMenu}
+                        />
+                        <VerseTooltip
+                            anchorEl={this.state.verseTooltipAnchorEl}
+                            open={this.state.verseTooltipOpen}
+                            text={this.state.verseTooltipText}
+                        />
+                        <EditorContextMenu
+                            anchorEl={this.state.editorContextMenuAnchorEl}
+                            open={this.state.editorContextMenuOpen}
+                            position={this.state.editorContextMenuPosition}
+                        />
+                    </Slate>
+                </EditorContextMenuProvider>
             </VerseTooltipProvider>
         )
     }
@@ -489,6 +534,9 @@ interface BasicUsfmEditorState {
     verseTooltipAnchorEl: HTMLElement | null
     verseTooltipText?: string
     verseTooltipOpen: boolean
+    editorContextMenuOpen: boolean
+    editorContextMenuAnchorEl: HTMLElement | null
+    editorContextMenuPosition?: { x: number; y: number }
 }
 
 interface VerseStartAndEnd {
