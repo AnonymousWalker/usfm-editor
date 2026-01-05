@@ -11,7 +11,7 @@ import { NoopUsfmEditor } from "../NoopUsfmEditor"
 import { UsfmEditorProps } from ".."
 import { ChapterEditor } from "../components/ChapterEditor"
 import { isEqual } from "lodash"
-import { FormControl, MenuItem, Select } from "@material-ui/core"
+import { FormControl, MenuItem, Select } from "@mui/material"
 
 export function withChapterSelection<W extends UsfmEditorRef>(
     WrappedEditor: ForwardRefUsfmEditor<W>

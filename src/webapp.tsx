@@ -1,6 +1,6 @@
 import * as React from "react"
 import * as ReactDOM from "react-dom"
-import { Container, Box } from "@material-ui/core"
+import { Container, Box } from "@mui/material"
 import "./style.css"
 import "./demo/demo.css"
 import { UsfmEditor } from "./index"

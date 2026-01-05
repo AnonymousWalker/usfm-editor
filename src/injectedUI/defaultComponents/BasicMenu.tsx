@@ -1,7 +1,7 @@
 import * as React from "react"
 import PropTypes from "prop-types"
-import MenuList from "@material-ui/core/MenuList"
-import Paper from "@material-ui/core/Paper"
+import MenuList from "@mui/material/MenuList"
+import Paper from "@mui/material/Paper"
 
 const BasicMenu = React.forwardRef<HTMLUListElement, BasicMenuProps>(
     ({ children }, ref) => (
@@ -18,7 +18,7 @@ BasicMenu.propTypes = {
 }
 
 interface BasicMenuProps {
-    children: PropTypes.ReactNodeArray
+    children: React.ReactNode
 }
 
 export default BasicMenu

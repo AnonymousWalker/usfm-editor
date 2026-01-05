@@ -1,15 +1,15 @@
 import React, { Component, FC } from "react"
 import PropTypes from "prop-types"
-import MenuItem from "@material-ui/core/MenuItem"
+import MenuItem from "@mui/material/MenuItem"
 import { HasHandleClick } from "../../injectedUI/UIComponentContext"
 
-import ListItemIcon from "@material-ui/core/ListItemIcon"
-import ListItemText from "@material-ui/core/ListItemText"
+import ListItemIcon from "@mui/material/ListItemIcon"
+import ListItemText from "@mui/material/ListItemText"
 
-import LinkIcon from "@material-ui/icons/Link"
-import LinkOffIcon from "@material-ui/icons/LinkOff"
-import AddIcon from "@material-ui/icons/Add"
-import DeleteIcon from "@material-ui/icons/Delete"
+import LinkIcon from "@mui/icons-material/Link"
+import LinkOffIcon from "@mui/icons-material/LinkOff"
+import AddIcon from "@mui/icons-material/Add"
+import DeleteIcon from "@mui/icons-material/Delete"
 
 interface VerseMenuButtonProps {
     icon: PropTypes.ReactComponentLike

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Button, Icon, Tooltip } from "@material-ui/core"
+import { Button, Tooltip } from "@mui/material"
 import { UsfmEditorRef } from ".."
 import { ActionSpec, ToolbarButtonSpec } from "./UsfmToolbar"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
@@ -27,10 +27,9 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
                 {typeof icon == "string" ? (
                     icon
                 ) : (
-                    <Icon
-                        component={icon}
-                        className="usfm-editor-toolbar-icon"
-                    />
+                    <span className="usfm-editor-toolbar-icon">
+                        {React.createElement(icon as React.ComponentType<any>, {})}
+                    </span>
                 )}
             </Button>
         </Tooltip>

@@ -3,11 +3,11 @@ import { useSlate, ReactEditor } from "slate-react"
 import { Range } from "slate"
 import { VerseTooltip } from "./VerseTooltip"
 import { EditorContextMenuContext } from "./EditorContextMenuContext"
-import AddIcon from "@material-ui/icons/Add"
-import FileCopyIcon from "@material-ui/icons/FileCopy"
-import AssignmentIcon from "@material-ui/icons/Assignment"
-import UndoIcon from "@material-ui/icons/Undo"
-import RedoIcon from "@material-ui/icons/Redo"
+import AddIcon from "@mui/icons-material/Add"
+import FileCopyIcon from "@mui/icons-material/FileCopy"
+import AssignmentIcon from "@mui/icons-material/Assignment"
+import UndoIcon from "@mui/icons-material/Undo"
+import RedoIcon from "@mui/icons-material/Redo"
 
 type EditorContextMenuProps = {
     anchorEl: HTMLElement | null

@@ -25,7 +25,7 @@ import * as React from "react"
 import "../style.css"
 import "./demo.css"
 import { OutputUsfm } from "./UsfmContainer"
-import FormatItalicButton from "@material-ui/icons/FormatItalic"
+import FormatItalicButton from "@mui/icons-material/FormatItalic"
 
 // The following objects should be imported from the "usfm-editor" module like this:
 // import { UsfmMarkers, UsfmEditor } from "usfm-editor"

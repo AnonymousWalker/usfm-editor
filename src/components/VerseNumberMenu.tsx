@@ -5,13 +5,13 @@ import { MyTransforms } from "../plugins/helpers/MyTransforms"
 import { MyEditor } from "../plugins/helpers/MyEditor"
 import PropTypes from "prop-types"
 import { UIComponentContext } from "../injectedUI/UIComponentContext"
-import Popper from "@material-ui/core/Popper"
-import ClickAwayListener from "@material-ui/core/ClickAwayListener"
+import Popper from "@mui/material/Popper"
+import ClickAwayListener from "@mui/material/ClickAwayListener"
 
 type VerseNumberMenuProps = {
     verseNumberEl: HTMLElement
     open: boolean
-    handleClose: (event: React.MouseEvent<Document>) => void
+    handleClose: (event: MouseEvent | TouchEvent | React.MouseEvent<Document>) => void
     useVerseAddRemove: boolean
 }
 
@@ -31,13 +31,20 @@ export const VerseNumberMenu: React.FC<VerseNumberMenuProps> = ({
         verseNumberEl
     ).concat(0)
 
+    const handleClickAway = React.useCallback((event: MouseEvent | TouchEvent) => {
+        handleClose(event as any)
+    }, [handleClose])
+
     return (
         <Popper
             anchorEl={verseNumberEl}
             open={open}
-            modifiers={{
-                flip: { enabled: true },
-            }}
+            modifiers={[
+                {
+                    name: "flip",
+                    enabled: true,
+                },
+            ]}
         >
             <ClickAwayListener
                 // If "onClick" is used instead of "onMouseDown", multiple menus may be
@@ -45,7 +52,7 @@ export const VerseNumberMenu: React.FC<VerseNumberMenuProps> = ({
                 // "onClick" to display the menu rather than "onMouseDown', this
                 // ClickAwayListener will not work.
                 mouseEvent={"onMouseDown"}
-                onClickAway={handleClose}
+                onClickAway={handleClickAway}
             >
                 <VerseMenu>
                     <VerseJoinUnjoinSubmenu

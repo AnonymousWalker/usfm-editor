@@ -9,7 +9,7 @@ import { flowRight } from "lodash"
 import { withChapterPaging } from "../components/ChapterEditor"
 import { ForwardRefUsfmEditor, UsfmEditorRef } from ".."
 import { withChapterSelection } from "../components/ChapterSelectionEditor"
-import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles"
+import { createTheme, ThemeProvider } from "@mui/material/styles"
 import { defaultToolbarSpecs } from "../components/UsfmToolbar"
 
 /**
@@ -70,7 +70,7 @@ type ChapterSelectionDemoState = {
     usfmOutput: string
 }
 
-const theme = createMuiTheme({
+const theme = createTheme({
     palette: {
         primary: {
             main: "#000000",

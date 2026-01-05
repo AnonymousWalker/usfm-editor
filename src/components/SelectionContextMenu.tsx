@@ -2,14 +2,14 @@ import * as React from "react"
 import { useSlate, ReactEditor } from "slate-react"
 import { Editor, Transforms } from "slate"
 import { MyEditor } from "../plugins/helpers/MyEditor"
-import Popper from "@material-ui/core/Popper"
-import ClickAwayListener from "@material-ui/core/ClickAwayListener"
-import MenuItem from "@material-ui/core/MenuItem"
-import MenuList from "@material-ui/core/MenuList"
-import Paper from "@material-ui/core/Paper"
-import ListItemIcon from "@material-ui/core/ListItemIcon"
-import ListItemText from "@material-ui/core/ListItemText"
-import AddIcon from "@material-ui/icons/Add"
+import Popper from "@mui/material/Popper"
+import ClickAwayListener from "@mui/material/ClickAwayListener"
+import MenuItem from "@mui/material/MenuItem"
+import MenuList from "@mui/material/MenuList"
+import Paper from "@mui/material/Paper"
+import ListItemIcon from "@mui/material/ListItemIcon"
+import ListItemText from "@mui/material/ListItemText"
+import AddIcon from "@mui/icons-material/Add"
 import { Range } from "slate"
 import { VerseTransforms } from "../plugins/helpers/VerseTransforms"
 
@@ -159,13 +159,19 @@ export const SelectionContextMenu: React.FC<SelectionContextMenuProps> = ({
             anchorEl={anchorEl}
             open={open}
             placement="bottom-start"
-            modifiers={{
-                flip: { enabled: true },
-                preventOverflow: {
+            modifiers={[
+                {
+                    name: "flip",
                     enabled: true,
-                    boundariesElement: "viewport",
                 },
-            }}
+                {
+                    name: "preventOverflow",
+                    enabled: true,
+                    options: {
+                        boundary: "viewport",
+                    },
+                },
+            ]}
         >
             <ClickAwayListener onClickAway={handleClose}>
                 <Paper>

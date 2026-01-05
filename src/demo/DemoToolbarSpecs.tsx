@@ -1,4 +1,4 @@
-import FormatItalicButton from "@material-ui/icons/FormatItalic"
+import FormatItalicButton from "@mui/icons-material/FormatItalic"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
 import { ToolbarSpecs } from "../components/UsfmToolbar"
 

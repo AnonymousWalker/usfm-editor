@@ -1,8 +1,8 @@
 import * as React from "react"
 import { UsfmEditorRef } from "../UsfmEditor"
-import Toolbar from "@material-ui/core/Toolbar"
-import { SvgIconTypeMap } from "@material-ui/core"
-import { OverridableComponent } from "@material-ui/core/OverridableComponent"
+import Toolbar from "@mui/material/Toolbar"
+import { SvgIconTypeMap } from "@mui/material"
+import { OverridableComponent } from "@mui/material/OverridableComponent"
 import { ToolbarButton } from "./ToolbarButton"
 import { UsfmMarkers } from "../utils/UsfmMarkers"
 
@@ -42,7 +42,7 @@ export type ToolbarSpecs = Record<string, ToolbarButtonSpec>
 /**
  * Defines a single toolbar button.
  * The icon is a string or component that can be loaded in one of the following two ways:
- *    import FormatBoldButton from "@material-ui/icons/FormatBold"
+ *    import FormatBoldButton from "@mui/icons-material/FormatBold"
  *    import { ReactComponent as CustomIcon } from "<relative path>/custom-icon.svg"
  * If a string is passed for the icon, the button will simply show that text.
  * cssClass allows for custom styling on the button.
