@@ -195,8 +195,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                         <ContentPasteIcon fontSize="small" />
                     </span>
                 </button>
-                <div className="usfm-editor-context-menu-separator" />
-                <button
+                {/* <button
                     className="usfm-editor-context-menu-button"
                     onMouseEnter={(e) => handleActionMouseEnter(e, "Undo", "⌘Z")}
                     onMouseLeave={handleActionMouseLeave}
@@ -215,7 +214,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                     <span className="usfm-editor-context-menu-icon">
                         <RedoIcon fontSize="small" />
                     </span>
-                </button>
+                </button> */}
             </div>
             {hoveredAction && tooltipAnchor && (
                 <VerseTooltip
