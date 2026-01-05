@@ -1,11 +1,12 @@
 import * as React from "react"
 import { useSlate, ReactEditor } from "slate-react"
-import { Range } from "slate"
+import { Range, Editor, Transforms } from "slate"
 import { VerseTooltip } from "./VerseTooltip"
 import { EditorContextMenuContext } from "./EditorContextMenuContext"
-import AddIcon from "@mui/icons-material/Add"
-import FileCopyIcon from "@mui/icons-material/FileCopy"
-import AssignmentIcon from "@mui/icons-material/Assignment"
+import { VerseTransforms } from "../plugins/helpers/VerseTransforms"
+import BookmarkAddOutlinedIcon from '@mui/icons-material/BookmarkAddOutlined'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import ContentPasteIcon from '@mui/icons-material/ContentPaste'
 import UndoIcon from "@mui/icons-material/Undo"
 import RedoIcon from "@mui/icons-material/Redo"
 
@@ -49,7 +50,19 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
     if (!open) return null
 
     const handleAddVerse = () => {
-        // TODO: Implement add verse handler
+        if (!editor.selection) return
+        const newVersePath = VerseTransforms.addVerseAtSelection(editor, editor.selection)
+
+        // Move cursor to the new verse's inline container if the verse was created successfully
+        if (newVersePath) {
+            Transforms.select(editor, Editor.start(editor, newVersePath.concat(0)))
+            // Use requestAnimationFrame to ensure the DOM updates before focusing
+            requestAnimationFrame(() => {
+                ReactEditor.focus(editor)
+                Transforms.select(editor, Editor.start(editor, newVersePath.concat(0)))
+            })
+        }
+
         hideContextMenu()
     }
 
@@ -155,7 +168,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                     onClick={handleAddVerse}
                 >
                     <span className="usfm-editor-context-menu-icon">
-                        <AddIcon fontSize="small" />
+                        <BookmarkAddOutlinedIcon fontSize="small" />
                     </span>
                     <span className="usfm-editor-context-menu-label">
                         Add Verse
@@ -169,7 +182,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                     onClick={handleCopy}
                 >
                     <span className="usfm-editor-context-menu-icon">
-                        <FileCopyIcon fontSize="small" />
+                        <ContentCopyIcon fontSize="small" />
                     </span>
                 </button>
                 <button
@@ -179,7 +192,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                     onClick={handlePaste}
                 >
                     <span className="usfm-editor-context-menu-icon">
-                        <AssignmentIcon fontSize="small" />
+                        <ContentPasteIcon fontSize="small" />
                     </span>
                 </button>
                 <div className="usfm-editor-context-menu-separator" />
