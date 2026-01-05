@@ -61,17 +61,6 @@ hr.usfm-editor-hr {
     margin: 0 0.75em 0.5em 0.75em;
 }
 
-.usfm-editor-context-menu:not(:empty) {
-    padding: 8px 7px 6px;
-    position: absolute;
-    z-index: 1;
-    top: -10000px;
-    left: -10000px;
-    margin-top: -6px;
-    opacity: 0;
-    border-radius: 4px;
-    transition: opacity 0.75s;
-}
 
 /* Give space and highlight when a verse is empty. */
 .usfm-editor-empty-verse {
@@ -122,10 +111,10 @@ hr.usfm-editor-hr {
 .usfm-editor-context-menu {
     display: flex;
     align-items: center;
+    padding: 8px 12px;
     background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    padding: 4px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     white-space: nowrap;
     opacity: 1 !important;
@@ -159,12 +148,6 @@ hr.usfm-editor-hr {
     display: flex;
     align-items: center;
     font-size: 16px;
-}
-
-.usfm-editor-context-menu-label {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #333;
 }
 
 .usfm-editor-context-menu-separator {

@@ -3,19 +3,16 @@ import { useSlate, ReactEditor } from "slate-react"
 import { Range } from "slate"
 import { VerseTooltip } from "./VerseTooltip"
 import { EditorContextMenuContext } from "./EditorContextMenuContext"
+import AddIcon from "@material-ui/icons/Add"
+import FileCopyIcon from "@material-ui/icons/FileCopy"
+import AssignmentIcon from "@material-ui/icons/Assignment"
+import UndoIcon from "@material-ui/icons/Undo"
+import RedoIcon from "@material-ui/icons/Redo"
 
 type EditorContextMenuProps = {
     anchorEl: HTMLElement | null
     open: boolean
     position?: { x: number; y: number }
-}
-
-type MenuAction = {
-    id: string
-    label: string
-    shortcut?: string
-    icon?: React.ReactNode
-    onClick: () => void
 }
 
 export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
@@ -24,7 +21,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
     position,
 }: EditorContextMenuProps) => {
     const editor = useSlate()
-    const [hoveredAction, setHoveredAction] = React.useState<string | null>(null)
+    const [hoveredAction, setHoveredAction] = React.useState<{ label: string; shortcut?: string } | null>(null)
     const [tooltipAnchor, setTooltipAnchor] = React.useState<HTMLElement | null>(null)
     const menuRef = React.useRef<HTMLDivElement>(null)
     const { hideContextMenu } = React.useContext(EditorContextMenuContext)
@@ -38,66 +35,50 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
             }
         }
 
+        // Add event listener after a delay to avoid immediate closure from the right-click event
+        const timeoutId = setTimeout(() => {
+            document.addEventListener("mousedown", handleClickOutside)
+        }, 100)
+
         return () => {
+            clearTimeout(timeoutId)
             document.removeEventListener("mousedown", handleClickOutside)
         }
     }, [open, hideContextMenu])
 
     if (!open) return null
 
-    const handleActionClick = (action: MenuAction) => {
-        action.onClick()
+    const handleAddVerse = () => {
+        // TODO: Implement add verse handler
         hideContextMenu()
     }
 
-    const actions: MenuAction[] = [
-        {
-            id: "add-verse",
-            label: "Add Verse",
-            shortcut: undefined,
-            onClick: () => {
-                // TODO: Implement add verse handler
-            },
-        },
-        {
-            id: "copy",
-            label: "Copy",
-            shortcut: "⌘C",
-            onClick: () => {
-                // TODO: Implement copy handler
-            },
-        },
-        {
-            id: "paste",
-            label: "Paste",
-            shortcut: "⌘V",
-            onClick: () => {
-                // TODO: Implement paste handler
-            },
-        },
-        {
-            id: "undo",
-            label: "Undo",
-            shortcut: "⌘Z",
-            onClick: () => {
-                // TODO: Implement undo handler
-            },
-        },
-        {
-            id: "redo",
-            label: "Redo",
-            shortcut: "⌘⇧Z",
-            onClick: () => {
-                // TODO: Implement redo handler
-            },
-        },
-    ]
+    const handleCopy = () => {
+        // TODO: Implement copy handler
+        hideContextMenu()
+    }
+
+    const handlePaste = () => {
+        // TODO: Implement paste handler
+        hideContextMenu()
+    }
+
+    const handleUndo = () => {
+        // TODO: Implement undo handler
+        hideContextMenu()
+    }
+
+    const handleRedo = () => {
+        // TODO: Implement redo handler
+        hideContextMenu()
+    }
 
     const handleActionMouseEnter = (
         event: React.MouseEvent<HTMLButtonElement>,
-        action: MenuAction
+        label: string,
+        shortcut?: string
     ) => {
-        setHoveredAction(action.id)
+        setHoveredAction({ label, shortcut })
         setTooltipAnchor(event.currentTarget)
     }
 
@@ -157,42 +138,77 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
     const style = getCursorPosition()
     if (!style) return null
 
-    const getTooltipText = (action: MenuAction): string => {
-        if (action.shortcut) {
-            return `${action.label} ${action.shortcut}`
+    const getTooltipText = (label: string, shortcut?: string): string => {
+        if (shortcut) {
+            return `${label} ${shortcut}`
         }
-        return action.label
+        return label
     }
 
     return (
         <>
             <div ref={menuRef} className="usfm-editor-context-menu" style={style}>
-                {actions.map((action, index) => (
-                    <React.Fragment key={action.id}>
-                        {index > 0 && <div className="usfm-editor-context-menu-separator" />}
-                        <button
-                            className="usfm-editor-context-menu-button"
-                            onMouseEnter={(e) => handleActionMouseEnter(e, action)}
-                            onMouseLeave={handleActionMouseLeave}
-                            onClick={() => handleActionClick(action)}
-                        >
-                            {action.icon && (
-                                <span className="usfm-editor-context-menu-icon">
-                                    {action.icon}
-                                </span>
-                            )}
-                            <span className="usfm-editor-context-menu-label">
-                                {action.label}
-                            </span>
-                        </button>
-                    </React.Fragment>
-                ))}
+                <button
+                    className="usfm-editor-context-menu-button"
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Add Verse")}
+                    onMouseLeave={handleActionMouseLeave}
+                    onClick={handleAddVerse}
+                >
+                    <span className="usfm-editor-context-menu-icon">
+                        <AddIcon fontSize="small" />
+                    </span>
+                    <span className="usfm-editor-context-menu-label">
+                        Add Verse
+                    </span>
+                </button>
+                <div className="usfm-editor-context-menu-separator" />
+                <button
+                    className="usfm-editor-context-menu-button"
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Copy", "⌘C")}
+                    onMouseLeave={handleActionMouseLeave}
+                    onClick={handleCopy}
+                >
+                    <span className="usfm-editor-context-menu-icon">
+                        <FileCopyIcon fontSize="small" />
+                    </span>
+                </button>
+                <button
+                    className="usfm-editor-context-menu-button"
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Paste", "⌘V")}
+                    onMouseLeave={handleActionMouseLeave}
+                    onClick={handlePaste}
+                >
+                    <span className="usfm-editor-context-menu-icon">
+                        <AssignmentIcon fontSize="small" />
+                    </span>
+                </button>
+                <div className="usfm-editor-context-menu-separator" />
+                <button
+                    className="usfm-editor-context-menu-button"
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Undo", "⌘Z")}
+                    onMouseLeave={handleActionMouseLeave}
+                    onClick={handleUndo}
+                >
+                    <span className="usfm-editor-context-menu-icon">
+                        <UndoIcon fontSize="small" />
+                    </span>
+                </button>
+                <button
+                    className="usfm-editor-context-menu-button"
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Redo", "⌘⇧Z")}
+                    onMouseLeave={handleActionMouseLeave}
+                    onClick={handleRedo}
+                >
+                    <span className="usfm-editor-context-menu-icon">
+                        <RedoIcon fontSize="small" />
+                    </span>
+                </button>
             </div>
             {hoveredAction && tooltipAnchor && (
                 <VerseTooltip
                     anchorEl={tooltipAnchor}
                     open={true}
-                    text={getTooltipText(actions.find((a) => a.id === hoveredAction)!)}
+                    text={getTooltipText(hoveredAction.label, hoveredAction.shortcut)}
                 />
             )}
         </>
