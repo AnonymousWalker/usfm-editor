@@ -20,6 +20,7 @@ export const VerseTransforms = {
     addVerseAtSelection,
     addVerseAtPoint,
     getNextVerseNumber,
+    decrementSubsequentVerses,
 }
 
 function joinWithPreviousVerse(editor: Editor, path: Path): void {
@@ -159,6 +160,7 @@ function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: str
         })
     }
     
+    // Note: incrementSubsequentVerses is already called inside addVerseAtPoint
     return result
 }
 
@@ -182,6 +184,8 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
         const newVersePath = Path.next(versePath)
         Transforms.insertNodes(editor, newVerse, { at: newVersePath })
         MyTransforms.moveToEndOfLastLeaf(editor, newVersePath)
+        // Increment verse numbers of subsequent verses (though there shouldn't be any at the end)
+        incrementSubsequentVerses(editor, newVersePath)
         return newVersePath
     }
 
@@ -234,6 +238,9 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
                 }
             }
         }
+        
+        // Increment verse numbers of subsequent verses
+        incrementSubsequentVerses(editor, newVersePath)
         
         return newVersePath
     } catch (error) {
@@ -307,6 +314,137 @@ function isCursorAtEndOfEditor(editor: Editor, point: Point): boolean {
     
     // If the cursor is at the end of the verse, splitNodes would have no effect
     return Point.equals(point, verseEnd)
+}
+
+/**
+ * Increments the verse numbers of all verses that come after the given verse path
+ * in the same chapter.
+ */
+function incrementSubsequentVerses(editor: Editor, versePath: Path): void {
+    // Get the chapter node containing this verse
+    const chapterEntry = MyEditor.getChapterNode(editor, versePath)
+    if (!chapterEntry) return
+    
+    const [chapter, chapterPath] = chapterEntry
+    if (!Element.isElement(chapter)) return
+    
+    // Find the index of the inserted verse within the chapter's children
+    let verseIndex = -1
+    for (let i = 0; i < chapter.children.length; i++) {
+        const childPath = chapterPath.concat(i)
+        if (Path.equals(childPath, versePath)) {
+            verseIndex = i
+            break
+        }
+    }
+    
+    // If we couldn't find the verse, try using the last element of the path as index
+    if (verseIndex === -1) {
+        verseIndex = versePath[versePath.length - 1]
+    }
+    
+    // Iterate through all children after the inserted verse
+    for (let i = verseIndex + 1; i < chapter.children.length; i++) {
+        const childPath = chapterPath.concat(i)
+        
+        try {
+            const [child] = Editor.node(editor, childPath)
+            
+            // Check if this child is a verse node
+            if (Element.isElement(child) && child.type === NodeTypes.VERSE) {
+                const verseNumPath = childPath.concat(0)
+                const [verseNumNode] = Editor.node(editor, verseNumPath)
+                
+                // Skip "front" verses
+                const currentVerseNumStr = Node.string(verseNumNode)
+                if (currentVerseNumStr === "front") continue
+                
+                // Parse the verse number (handle ranges like "5-6")
+                const [rangeStart, rangeEnd] = currentVerseNumStr.split("-")
+                const startNum = parseInt(rangeStart)
+                const endNum = rangeEnd ? parseInt(rangeEnd) : null
+                
+                // Increment the verse number(s)
+                const newStartNum = startNum + 1
+                const newEndNum = endNum ? endNum + 1 : null
+                const newVerseNumStr = newEndNum ? `${newStartNum}-${newEndNum}` : newStartNum.toString()
+                
+                // Update the verse number node
+                MyTransforms.replaceNodes(editor, verseNumPath, verseNumber(newVerseNumStr))
+            }
+        } catch (error) {
+            // Skip if we can't access this node (might not be a verse)
+            continue
+        }
+    }
+}
+
+/**
+ * Decrements the verse numbers of all verses that come after the given verse path
+ * in the same chapter.
+ */
+export function decrementSubsequentVerses(editor: Editor, versePath: Path): void {
+    // Get the chapter node containing this verse
+    const chapterEntry = MyEditor.getChapterNode(editor, versePath)
+    if (!chapterEntry) return
+    
+    const [chapter, chapterPath] = chapterEntry
+    if (!Element.isElement(chapter)) return
+    
+    // Find the index of the deleted verse within the chapter's children
+    let verseIndex = -1
+    for (let i = 0; i < chapter.children.length; i++) {
+        const childPath = chapterPath.concat(i)
+        if (Path.equals(childPath, versePath)) {
+            verseIndex = i
+            break
+        }
+    }
+    
+    // If we couldn't find the verse, try using the last element of the path as index
+    if (verseIndex === -1) {
+        verseIndex = versePath[versePath.length - 1]
+    }
+    
+    // Iterate through all children after the deleted verse
+    for (let i = verseIndex + 1; i < chapter.children.length; i++) {
+        const childPath = chapterPath.concat(i)
+        
+        try {
+            const [child] = Editor.node(editor, childPath)
+            
+            // Check if this child is a verse node
+            if (Element.isElement(child) && child.type === NodeTypes.VERSE) {
+                const verseNumPath = childPath.concat(0)
+                const [verseNumNode] = Editor.node(editor, verseNumPath)
+                
+                // Skip "front" verses
+                const currentVerseNumStr = Node.string(verseNumNode)
+                if (currentVerseNumStr === "front") continue
+                
+                // Parse the verse number (handle ranges like "5-6")
+                const [rangeStart, rangeEnd] = currentVerseNumStr.split("-")
+                const startNum = parseInt(rangeStart)
+                const endNum = rangeEnd ? parseInt(rangeEnd) : null
+                
+                // Decrement the verse number(s) - but don't go below 1
+                const newStartNum = Math.max(1, startNum - 1)
+                const newEndNum = endNum ? Math.max(1, endNum - 1) : null
+                
+                // If both numbers are the same after decrementing, use a single number
+                // Otherwise, if we had a range, keep it as a range
+                const newVerseNumStr = (newEndNum && newEndNum !== newStartNum)
+                    ? `${newStartNum}-${newEndNum}`
+                    : newStartNum.toString()
+                
+                // Update the verse number node
+                MyTransforms.replaceNodes(editor, verseNumPath, verseNumber(newVerseNumStr))
+            }
+        } catch (error) {
+            // Skip if we can't access this node (might not be a verse)
+            continue
+        }
+    }
 }
 
 /**

@@ -77,6 +77,9 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                             prevTextLength = 0
                         }
 
+                        // Decrement verse numbers of subsequent verses before merging
+                        // (we need to do this before the merge because the verse will be removed)
+                        VerseTransforms.decrementSubsequentVerses(editor, versePath)
                         // Use the existing transform to remove verse and concatenate
                         VerseTransforms.removeVerseAndConcatenateContentsWithPrevious(
                             editor,
@@ -111,6 +114,8 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                     } else {
                         // If no previous verse, just remove the verse number
                         Transforms.removeNodes(editor, { at: verseNumPath })
+                        // Decrement verse numbers of subsequent verses
+                        VerseTransforms.decrementSubsequentVerses(editor, versePath)
                         // Keep cursor at the start of the verse contents (now at index 0)
                         const inlineContainerPath = versePath.concat(0)
                         try {
