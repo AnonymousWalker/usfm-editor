@@ -216,73 +216,100 @@ export const withVerseShortcut = (editor: ReactEditor): ReactEditor => {
                         verseNumber = verseMatch[1]
                         matchLength = verseMatch[0].length
                     } else {
-                        // Pattern 2: {number}.  (number followed by period and double space)
-                        const numberPattern = /(^|\s)(\d+)\.$/
-                        const numberMatch = textBeforeCursor.match(numberPattern)
+                        // Pattern 1b: /v{number} followed by space
+                        const forwardSlashVersePattern = /\/v(\d+)$/
+                        const forwardSlashMatch = textBeforeCursor.match(forwardSlashVersePattern)
 
-                        // Do not trigger on numbers greater than 180
-                        if (numberMatch && parseInt(numberMatch[2], 10) < 180) {
-                            verseNumber = numberMatch[2]
-                            matchLength = numberMatch[0].length - 1
+                        if (forwardSlashMatch) {
+                            verseNumber = forwardSlashMatch[1]
+                            matchLength = forwardSlashMatch[0].length
+                        } else {
+                            // Pattern 1c: \v{number} followed by space
+                            const backslashVersePattern = /\\v(\d+)$/
+                            const backslashMatch = textBeforeCursor.match(backslashVersePattern)
 
-                            const isCursorAtEndOfNode = offset >= currentNode[0].text.length
-                            let extraSpaceLength = 0
-                            if (isCursorAtEndOfNode) {
-                                // workaround for inserting verse at the end of a paragraph, it should not wrap the next line into the same paragraph
-                                const pointBeforeInsert = selection.anchor
-                                Transforms.insertText(editor, " ")
-                                Transforms.select(editor, pointBeforeInsert)
-                            }
+                            if (backslashMatch) {
+                                verseNumber = backslashMatch[1]
+                                matchLength = backslashMatch[0].length
+                            } else {
+                                // Pattern 1d: verse {number} followed by space
+                                const verseWordPattern = /verse\s+(\d+)$/i
+                                const verseWordMatch = textBeforeCursor.match(verseWordPattern)
 
-                            const isInsertingAtBeginningOfNode = offset === matchLength + 1
-                            let originalSelectionAnchor = selection.anchor
+                                if (verseWordMatch) {
+                                    verseNumber = verseWordMatch[1]
+                                    matchLength = verseWordMatch[0].length
+                                } else {
+                                // Pattern 2: {number}.  (number followed by period and double space)
+                                const numberPattern = /(^|\s)(\d+)\.$/
+                                const numberMatch = textBeforeCursor.match(numberPattern)
 
-                            if (isInsertingAtBeginningOfNode) {
-                                console.log("adding verse at the beginning of the text")
-                                // Insert space and move cursor forward, following pattern from VerseTransforms
-                                Transforms.insertText(editor, " ", { at: { path: selection.anchor.path, offset: 0 } })
-                                const pointAfterInsert: Point = { path: selection.anchor.path, offset: selection.anchor.offset + 1 }
-                                Transforms.select(editor, pointAfterInsert)
-                                originalSelectionAnchor = pointAfterInsert
-                                extraSpaceLength++
-                            }
+                                // Do not trigger on numbers greater than 180
+                                if (numberMatch && parseInt(numberMatch[2], 10) < 180) {
+                                    verseNumber = numberMatch[2]
+                                    matchLength = numberMatch[0].length - 1
 
-                            // Use the refactored function to create the verse and get the new verse path
-                            const newVersePath = VerseTransforms.addVerseAtPoint(editor, originalSelectionAnchor, verseNumber)
+                                    const isCursorAtEndOfNode = offset >= currentNode[0].text.length
+                                    let extraSpaceLength = 0
+                                    if (isCursorAtEndOfNode) {
+                                        // workaround for inserting verse at the end of a paragraph, it should not wrap the next line into the same paragraph
+                                        const pointBeforeInsert = selection.anchor
+                                        Transforms.insertText(editor, " ")
+                                        Transforms.select(editor, pointBeforeInsert)
+                                    }
 
-                            // Delete the matched text
-                            const deleteStart = offset - matchLength
-                            Transforms.delete(editor, {
-                                at: {
-                                    anchor: { path: selection.anchor.path, offset: deleteStart - extraSpaceLength },
-                                    focus: { path: selection.anchor.path, offset: offset }
-                                }
-                            })
+                                    const isInsertingAtBeginningOfNode = offset === matchLength + 1
+                                    let originalSelectionAnchor = selection.anchor
 
-                            if (isInsertingAtBeginningOfNode) {
-                                // Delete the space that was inserted at offset 0 of the original text node
-                                try {
+                                    if (isInsertingAtBeginningOfNode) {
+                                        console.log("adding verse at the beginning of the text")
+                                        // Insert space and move cursor forward, following pattern from VerseTransforms
+                                        Transforms.insertText(editor, " ", { at: { path: selection.anchor.path, offset: 0 } })
+                                        const pointAfterInsert: Point = { path: selection.anchor.path, offset: selection.anchor.offset + 1 }
+                                        Transforms.select(editor, pointAfterInsert)
+                                        originalSelectionAnchor = pointAfterInsert
+                                        extraSpaceLength++
+                                    }
+
+                                    // Use the refactored function to create the verse and get the new verse path
+                                    const newVersePath = VerseTransforms.addVerseAtPoint(editor, originalSelectionAnchor, verseNumber)
+
+                                    // Delete the matched text
+                                    const deleteStart = offset - matchLength
                                     Transforms.delete(editor, {
                                         at: {
-                                            anchor: { path: selection.anchor.path, offset: 0 },
-                                            focus: { path: selection.anchor.path, offset: 1 }
+                                            anchor: { path: selection.anchor.path, offset: deleteStart - extraSpaceLength },
+                                            focus: { path: selection.anchor.path, offset: offset }
                                         }
                                     })
-                                } catch (e) {
-                                    console.log("Could not delete inserted space:", e)
+
+                                    if (isInsertingAtBeginningOfNode) {
+                                        // Delete the space that was inserted at offset 0 of the original text node
+                                        try {
+                                            Transforms.delete(editor, {
+                                                at: {
+                                                    anchor: { path: selection.anchor.path, offset: 0 },
+                                                    focus: { path: selection.anchor.path, offset: 1 }
+                                                }
+                                            })
+                                        } catch (e) {
+                                            console.log("Could not delete inserted space:", e)
+                                        }
+                                    }
+                                    
+                                    // Move cursor to the new verse's inline container if the verse was created successfully
+                                    if (newVersePath) {
+                                        const newInlineContainerPath = newVersePath.concat(1, 0)
+                                        Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
+                                        // Delete the space that was inserted at the beginning if needed
+                                    }
+
+                                    console.log("tree:", editor.children)
+
+                                    return
+                                }
                                 }
                             }
-                            
-                            // Move cursor to the new verse's inline container if the verse was created successfully
-                            if (newVersePath) {
-                                const newInlineContainerPath = newVersePath.concat(1, 0)
-                                Transforms.select(editor, Editor.start(editor, newInlineContainerPath))
-                                // Delete the space that was inserted at the beginning if needed
-                            }
-
-                            console.log("tree:", editor.children)
-
-                            return
                         }
                     }
 
