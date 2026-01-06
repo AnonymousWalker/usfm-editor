@@ -10,7 +10,6 @@ import { defaultToolbarSpecs } from "./components/UsfmToolbar"
 const usfmString = `
 \\id GEN
 \\c 1
-\\p
 \\v 1
 \\v 2
 \\v 3 1 The elder, To my dear friend Gaius, whom I love in the truth. 2 Dear friend, I pray that you may enjoy good health and that all may go well with you, even as your soul is getting along well. 3 It gave me great joy when some believers came and testified about your faithfulness to the truth, telling how you continue to walk in it.
@@ -48,6 +47,7 @@ const Demo: React.FC = () => {
                         {/* The editor can be given a ref of type UsfmEditorRef
                          to have access to the editor API (use React.createRef<UsfmEditorRef>)
                         */}
+                        <h2 className="text-2xl font-bold mb-6 text-gray-900">3 John 1</h2>
                         <UsfmEditor
                             usfmString={usfmString}
                             onChange={handleEditorChange}

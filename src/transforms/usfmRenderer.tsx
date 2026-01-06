@@ -258,6 +258,7 @@ const InlineContainer = (props: RenderElementProps) => {
 }
 
 const ChapterNumber = (props: RenderElementProps) => {
+    return null
     return (
         <h1
             {...props.attributes}
