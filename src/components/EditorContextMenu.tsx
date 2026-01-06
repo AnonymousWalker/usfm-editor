@@ -4,6 +4,7 @@ import { Range, Editor, Transforms } from "slate"
 import { VerseTooltip } from "./VerseTooltip"
 import { EditorContextMenuContext } from "./EditorContextMenuContext"
 import { VerseTransforms } from "../plugins/helpers/VerseTransforms"
+import { copySelectedText } from "../utils/clipboardUtils"
 import BookmarkAddOutlinedIcon from '@mui/icons-material/BookmarkAddOutlined'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ContentPasteIcon from '@mui/icons-material/ContentPaste'
@@ -66,13 +67,42 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
         hideContextMenu()
     }
 
-    const handleCopy = () => {
-        // TODO: Implement copy handler
+    const handleCopy = async () => {
+        await copySelectedText(editor)
         hideContextMenu()
     }
 
-    const handlePaste = () => {
-        // TODO: Implement paste handler
+    const handlePaste = async () => {
+        if (!editor.selection) {
+            hideContextMenu()
+            return
+        }
+
+        try {
+            // Read text from clipboard
+            const clipboardText = await navigator.clipboard.readText()
+            // const trimmedText = clipboardText.trim()
+            if (!Range.isCollapsed(editor.selection)) {
+                Transforms.delete(editor)
+            }
+            Transforms.insertText(editor, clipboardText)
+        } catch (error) {
+            console.error("Failed to paste text:", error)
+            // Fallback: try using the DOM clipboard API
+            try {
+                const clipboardText = await navigator.clipboard.readText()
+                const trimmedText = clipboardText.trim()
+                if (trimmedText && editor.selection) {
+                    if (!Range.isCollapsed(editor.selection)) {
+                        Transforms.delete(editor)
+                    }
+                    Transforms.insertText(editor, trimmedText)
+                }
+            } catch (fallbackError) {
+                console.error("Fallback paste also failed:", fallbackError)
+            }
+        }
+
         hideContextMenu()
     }
 

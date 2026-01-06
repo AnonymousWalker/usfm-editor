@@ -209,7 +209,6 @@ export class BasicUsfmEditor
     /* BasicUsfmEditor functions */
 
     handleChange: (value: Descendant[]) => void = (value) => {
-        console.debug("after change", value)
         this.fixSelectionOnChapterOrVerseNumber()
         this.setState({ value: value }, () => {
             // Note: Selection menu state is updated in onMouseUp and onKeyUp
@@ -313,41 +312,41 @@ export class BasicUsfmEditor
     }
 
     fixSelectionOnChapterOrVerseNumber(): void {
-        const editor = this.slateEditor
-        const selection = editor.selection
-        if (!selection || !MyEditor.isVerseOrChapterNumberSelected(editor)) {
-            return
-        }
+        // const editor = this.slateEditor
+        // const selection = editor.selection
+        // if (!selection || !MyEditor.isVerseOrChapterNumberSelected(editor)) {
+        //     return
+        // }
 
-        console.debug("selection before correction: ", selection)
+        // console.debug("selection before correction: ", selection)
 
-        const anchorVersePath = MyEditor.getVerseNode(
-            editor,
-            selection.anchor.path
-        )?.[1]
+        // const anchorVersePath = MyEditor.getVerseNode(
+        //     editor,
+        //     selection.anchor.path
+        // )?.[1]
 
-        if (Range.isCollapsed(selection) && anchorVersePath) {
-            // This can happen when nodes get merged after the user presses delete at the
-            // start of a verse. The solution is to move to the start of the inline container.
-            SelectionTransforms.moveToStartOfFirstLeaf(
-                editor,
-                anchorVersePath.concat(1)
-            )
-        } else if (Range.isBackward(selection)) {
-            // There is currently no solution to the problem when the user selects backwards
-            // through a verse number. Setting the focus to the start of the verse at which
-            // the selection began seems reasonable, but it does not consistently work.
-            Transforms.deselect(this.slateEditor)
-        } else if (Range.isForward(selection) && anchorVersePath) {
-            // When the user selects forwards through a verse number, we need to set
-            // the focus to the end of the verse at which they started the selection.
-            // If the errant selection was the result of a double/triple click, we can be assured
-            // that the user's selection came from the left (see the jsdoc for SelectionSeparator),
-            // so we take the same action here.
-            SelectionTransforms.moveToEndOfLastLeaf(editor, anchorVersePath, {
-                edge: "focus",
-            })
-        }
+        // if (Range.isCollapsed(selection) && anchorVersePath) {
+        //     // This can happen when nodes get merged after the user presses delete at the
+        //     // start of a verse. The solution is to move to the start of the inline container.
+        //     SelectionTransforms.moveToStartOfFirstLeaf(
+        //         editor,
+        //         anchorVersePath.concat(1)
+        //     )
+        // } else if (Range.isBackward(selection)) {
+        //     // There is currently no solution to the problem when the user selects backwards
+        //     // through a verse number. Setting the focus to the start of the verse at which
+        //     // the selection began seems reasonable, but it does not consistently work.
+        //     Transforms.deselect(this.slateEditor)
+        // } else if (Range.isForward(selection) && anchorVersePath) {
+        //     // When the user selects forwards through a verse number, we need to set
+        //     // the focus to the end of the verse at which they started the selection.
+        //     // If the errant selection was the result of a double/triple click, we can be assured
+        //     // that the user's selection came from the left (see the jsdoc for SelectionSeparator),
+        //     // so we take the same action here.
+        //     SelectionTransforms.moveToEndOfLastLeaf(editor, anchorVersePath, {
+        //         edge: "focus",
+        //     })
+        // }
     }
 
     updateIdentificationFromProp = (): void => {

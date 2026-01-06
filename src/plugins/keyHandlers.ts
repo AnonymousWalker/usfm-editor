@@ -5,21 +5,31 @@ import { UsfmMarkers } from "../utils/UsfmMarkers"
 import { ReactEditor } from "slate-react"
 import { SelectionTransforms } from "./helpers/SelectionTransforms"
 import { VerseTransforms } from "./helpers/VerseTransforms"
+import { copySelectedText } from "../utils/clipboardUtils"
 
 export function handleKeyPress(
     event: React.KeyboardEvent,
     editor: Editor
 ): void {
+    // Handle Ctrl+C / Cmd+C for copy
+    if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+        event.preventDefault()
+        copySelectedText(editor).catch((error) => {
+            console.error("Failed to copy via keyboard shortcut:", error)
+        })
+        return
+    }
+
     if (event.key === "ArrowLeft") {
         onLeftArrowPress(event, editor)
     } else if (event.key === "ArrowRight") {
         onRightArrowPress(event, editor)
     }
 
-    if (!isNavigationKey(event) && isVerseOrChapterNumSelected(editor)) {
-        console.debug("Verse or chapter number selected, preventing action")
-        event.preventDefault()
-    }
+    // if (!isNavigationKey(event) && isVerseOrChapterNumSelected(editor)) {
+    //     console.debug("Verse or chapter number selected, preventing action")
+    //     event.preventDefault()
+    // }
 }
 
 export const withEnter = (editor: ReactEditor): ReactEditor => {
