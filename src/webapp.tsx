@@ -20,7 +20,7 @@ const usfmString = `
 \\v 8 8We ought therefore to show hospitality to such people so that we may work together for the truth.
 \\p
 \\p
-\\v 9
+\\v 9 10 I have no greater joy than to hear that my children are walking in the truth.
 \\v 10 9 I wrote to the church, but Diotrephes, who loves to be first, will not welcome us.
 \\p
 \\p
