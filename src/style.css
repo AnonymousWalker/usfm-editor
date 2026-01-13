@@ -64,7 +64,6 @@ hr.usfm-editor-hr {
 
 /* Give space and highlight when a verse is empty. */
 .usfm-editor-empty-verse {
-    z-index: -1;
     margin: 0 0.5em 0 0;
     /* Red "error" wavy underline for empty verses */
     text-decoration-line: underline;
@@ -90,6 +89,9 @@ hr.usfm-editor-hr {
 
 .usfm-editor-verse {
     position: relative;
+}
+.usfm-editor-verse.usfm-editor-empty-verse {
+    position: static;
 }
 
 .usfm-editor-verse-tooltip {
