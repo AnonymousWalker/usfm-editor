@@ -4,9 +4,10 @@ import { Range, Editor, Transforms } from "slate"
 import { VerseTooltip } from "./VerseTooltip"
 import { EditorContextMenuContext } from "./EditorContextMenuContext"
 import { VerseTransforms } from "../plugins/helpers/VerseTransforms"
-import { copySelectedText } from "../utils/clipboardUtils"
+import { copySelectedText, cutSelectedText } from "../utils/clipboardUtils"
 import BookmarkAddOutlinedIcon from '@mui/icons-material/BookmarkAddOutlined'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import ContentCutIcon from '@mui/icons-material/ContentCut'
 import ContentPasteIcon from '@mui/icons-material/ContentPaste'
 import UndoIcon from "@mui/icons-material/Undo"
 import RedoIcon from "@mui/icons-material/Redo"
@@ -69,6 +70,11 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
 
     const handleCopy = async () => {
         await copySelectedText(editor)
+        hideContextMenu()
+    }
+
+    const handleCut = async () => {
+        await cutSelectedText(editor)
         hideContextMenu()
     }
 
@@ -207,7 +213,7 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                 <div className="usfm-editor-context-menu-separator" />
                 <button
                     className="usfm-editor-context-menu-button"
-                    onMouseEnter={(e) => handleActionMouseEnter(e, "Copy", "⌘C")}
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Copy", "Ctrl + C")}
                     onMouseLeave={handleActionMouseLeave}
                     onClick={handleCopy}
                 >
@@ -217,7 +223,17 @@ export const EditorContextMenu: React.FC<EditorContextMenuProps> = ({
                 </button>
                 <button
                     className="usfm-editor-context-menu-button"
-                    onMouseEnter={(e) => handleActionMouseEnter(e, "Paste", "⌘V")}
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Cut", "Ctrl + X")}
+                    onMouseLeave={handleActionMouseLeave}
+                    onClick={handleCut}
+                >
+                    <span className="usfm-editor-context-menu-icon">
+                        <ContentCutIcon fontSize="small" />
+                    </span>
+                </button>
+                <button
+                    className="usfm-editor-context-menu-button"
+                    onMouseEnter={(e) => handleActionMouseEnter(e, "Paste", "Ctrl + V")}
                     onMouseLeave={handleActionMouseLeave}
                     onClick={handlePaste}
                 >

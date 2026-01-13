@@ -5,7 +5,7 @@ import { UsfmMarkers } from "../utils/UsfmMarkers"
 import { ReactEditor } from "slate-react"
 import { SelectionTransforms } from "./helpers/SelectionTransforms"
 import { VerseTransforms } from "./helpers/VerseTransforms"
-import { copySelectedText } from "../utils/clipboardUtils"
+import { copySelectedText, cutSelectedText } from "../utils/clipboardUtils"
 
 export function handleKeyPress(
     event: React.KeyboardEvent,
@@ -16,6 +16,15 @@ export function handleKeyPress(
         event.preventDefault()
         copySelectedText(editor).catch((error) => {
             console.error("Failed to copy via keyboard shortcut:", error)
+        })
+        return
+    }
+
+    // Handle Ctrl+X / Cmd+X for cut
+    if ((event.ctrlKey || event.metaKey) && event.key === "x") {
+        event.preventDefault()
+        cutSelectedText(editor).catch((error) => {
+            console.error("Failed to cut via keyboard shortcut:", error)
         })
         return
     }
