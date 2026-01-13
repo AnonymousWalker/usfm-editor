@@ -64,12 +64,21 @@ hr.usfm-editor-hr {
 
 /* Give space and highlight when a verse is empty. */
 .usfm-editor-empty-verse {
+    z-index: -1;
     margin: 0 0.5em 0 0;
     /* Red "error" wavy underline for empty verses */
     text-decoration-line: underline;
     text-decoration-style: wavy;
     text-decoration-color: #e53935;
     text-decoration-thickness: 1px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    padding: 4px 12px 4px 4px;
+}
+.usfm-editor-empty-verse .usfm-marker-p {
+    margin: 0 0.5em 0 0;
+    background-color: #e0e0e0;
+    border-radius: 4px;
 }
 
 .usfm-editor-inline {

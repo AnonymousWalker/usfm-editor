@@ -43,7 +43,7 @@ const Demo: React.FC = () => {
         <Container maxWidth="md" style={{ fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' }}>
             <Box py={4}>
                 <div className="row">
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', lineHeight: '1.6' }}>
                         {/* The editor can be given a ref of type UsfmEditorRef
                          to have access to the editor API (use React.createRef<UsfmEditorRef>)
                         */}
