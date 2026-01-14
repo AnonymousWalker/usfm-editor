@@ -408,6 +408,28 @@ function onLeftArrowPress(event: React.KeyboardEvent, editor: Editor) {
 }
 
 function onRightArrowPress(event: React.KeyboardEvent, editor: Editor) {
+    const selection = editor.selection
+    const verseNodeEntry = MyEditor.getVerseNode(editor)
+    
+    // Move right through a verse number node to the start of the next verse,
+    // but only when we're at the end of the current verse.
+    if (
+        verseNodeEntry &&
+        selection &&
+        Range.isCollapsed(selection) &&
+        Editor.isEnd(editor, selection.anchor, verseNodeEntry[1])
+    ) {
+        const nextVerseEntry = MyEditor.getNextVerse(editor, selection.focus.path)
+        if (nextVerseEntry) {
+            event.preventDefault()
+            const targetPath = [...nextVerseEntry[1], 1, 0]
+            Transforms.select(editor, {
+                path: targetPath,
+                offset: 0,
+            })
+        }
+    }
+
     const chapterNodeEntry = MyEditor.getChapterNode(editor)
     if (
         chapterNodeEntry &&

@@ -20,6 +20,7 @@ export const MyEditor = {
     getNextBlock,
     getVerseNode,
     getPreviousVerse,
+    getNextVerse,
     getChapterNode,
     getLastVerse,
     getLastVerseNumberOrRange,
@@ -173,6 +174,28 @@ function getPreviousVerse(
     return includeFront || Node.string(prevVerseElement.children[0]) !== "front"
         ? [prevVerseElement, prevVersePath]
         : undefined
+}
+
+/**
+ * Get the next verse node (after the given path)
+ */
+function getNextVerse(
+    editor: Editor,
+    path: Path
+): NodeEntry<Element> | undefined {
+    const [node] = Editor.node(editor, path)
+    const thisVersePath: Path | undefined = isVerseNode(node)
+        ? path
+        : MyEditor.getVerseNode(editor, path)?.[1]
+
+    if (!thisVersePath) return undefined
+
+    const nextNode = Editor.node(editor, Path.next(thisVersePath))
+    if (!nextNode || !nextNode[0]) return undefined
+    const [nextVerseElement, nextVersePath] = nextNode
+    if (!isVerseNode(nextVerseElement)) return undefined
+    if (!Element.isElement(nextVerseElement)) return undefined
+    return [nextVerseElement, nextVersePath]
 }
 
 /**
