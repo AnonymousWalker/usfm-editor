@@ -77,39 +77,30 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                 const verseNodeEntry = MyEditor.getVerseNode(editor)
                 if (verseNodeEntry) {
                     const [_verse, versePath] = verseNodeEntry
-                    const verseNumPath = versePath.concat(0)
-
-                    // Check if there's a previous verse to merge into
                     const prevVerse = MyEditor.getPreviousVerse(editor, versePath)
+
+                    // Capture cursor position info before deletion (for merge case)
+                    let prevInlineContainerPath: Path | undefined
+                    let prevTextLength = 0
                     if (prevVerse) {
                         const [prevVerseNode, prevVersePath] = prevVerse
-                        // Capture the length of the previous verse's text before merging
-                        const prevInlineContainerPath = prevVersePath.concat(prevVerseNode.children.length - 1)
-                        let prevTextLength = 0
+                        prevInlineContainerPath = prevVersePath.concat(prevVerseNode.children.length - 1)
                         try {
-                            const [prevInlineContainer] = Editor.node(
-                                editor,
-                                prevInlineContainerPath
-                            )
+                            const [prevInlineContainer] = Editor.node(editor, prevInlineContainerPath)
                             prevTextLength = Node.string(prevInlineContainer).length
                         } catch (_) {
                             prevTextLength = 0
                         }
+                    }
 
-                        // Decrement verse numbers of subsequent verses before merging
-                        // (we need to do this before the merge because the verse will be removed)
-                        VerseTransforms.decrementSubsequentVerses(editor, versePath)
-                        // Use the existing transform to remove verse and concatenate
-                        VerseTransforms.removeVerseAndConcatenateContentsWithPrevious(
-                            editor,
-                            verseNumPath
-                        )
+                    // Delete the verse using the utility function
+                    VerseTransforms.deleteVerse(editor)
+
+                    // Handle cursor positioning after deletion
+                    if (prevVerse && prevInlineContainerPath) {
                         // After merge, move cursor to the position with offset equal to the previous text length
                         try {
-                            Transforms.select(
-                                editor,
-                                Editor.start(editor, prevInlineContainerPath)
-                            )
+                            Transforms.select(editor, Editor.start(editor, prevInlineContainerPath))
                             if (prevTextLength > 0) {
                                 Transforms.move(editor, {
                                     distance: prevTextLength,
@@ -119,29 +110,17 @@ export const withBackspace = (editor: ReactEditor): ReactEditor => {
                         } catch (e) {
                             // Fallbacks if structure differs unexpectedly
                             try {
-                                Transforms.select(
-                                    editor,
-                                    Editor.end(editor, prevInlineContainerPath)
-                                )
+                                Transforms.select(editor, Editor.end(editor, prevInlineContainerPath))
                             } catch (_) {
-                                Transforms.select(
-                                    editor,
-                                    Editor.end(editor, prevVersePath)
-                                )
+                                const [prevVerseNode, prevVersePath] = prevVerse
+                                Transforms.select(editor, Editor.end(editor, prevVersePath))
                             }
                         }
                     } else {
-                        // If no previous verse, just remove the verse number
-                        Transforms.removeNodes(editor, { at: verseNumPath })
-                        // Decrement verse numbers of subsequent verses
-                        VerseTransforms.decrementSubsequentVerses(editor, versePath)
                         // Keep cursor at the start of the verse contents (now at index 0)
                         const inlineContainerPath = versePath.concat(0)
                         try {
-                            Transforms.select(
-                                editor,
-                                Editor.start(editor, inlineContainerPath)
-                            )
+                            Transforms.select(editor, Editor.start(editor, inlineContainerPath))
                         } catch (e) {
                             // Fall back to start of the verse node
                             Transforms.select(editor, Editor.start(editor, versePath))

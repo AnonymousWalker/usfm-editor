@@ -21,6 +21,7 @@ export const VerseTransforms = {
     addVerseAtPoint,
     getNextVerseNumber,
     decrementSubsequentVerses,
+    deleteVerse,
 }
 
 function joinWithPreviousVerse(editor: Editor, path: Path): void {
@@ -489,5 +490,37 @@ function _insertLeadingSpace(
     const currentText = Node.string(node)
     if (currentText.trim()) {
         Transforms.insertNodes(editor, textNode(" "), { at: path.concat(0) })
+    }
+}
+
+/**
+ * Deletes a verse at the given path (or current selection if no path provided).
+ * If there's a previous verse, merges the verse contents with it.
+ * Otherwise, just removes the verse number.
+ * Also decrements verse numbers of subsequent verses.
+ */
+function deleteVerse(editor: Editor, versePath?: Path): void {
+    const verseNodeEntry = versePath
+        ? MyEditor.getVerseNode(editor, versePath)
+        : MyEditor.getVerseNode(editor)
+
+    if (!verseNodeEntry) return
+
+    const [_verse, path] = verseNodeEntry
+    const verseNumPath = path.concat(0)
+
+    // Check if there's a previous verse to merge into
+    const prevVerse = MyEditor.getPreviousVerse(editor, path)
+    if (prevVerse) {
+        // Decrement verse numbers of subsequent verses before merging
+        // (we need to do this before the merge because the verse will be removed)
+        decrementSubsequentVerses(editor, path)
+        // Use the existing transform to remove verse and concatenate
+        removeVerseAndConcatenateContentsWithPrevious(editor, verseNumPath)
+    } else {
+        // If no previous verse, just remove the verse number
+        Transforms.removeNodes(editor, { at: verseNumPath })
+        // Decrement verse numbers of subsequent verses
+        decrementSubsequentVerses(editor, path)
     }
 }

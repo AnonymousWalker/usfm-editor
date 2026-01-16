@@ -19,21 +19,26 @@ type VerseNumberProps = {
 }
 
 export const VerseNumber: React.FC<VerseNumberProps> = forwardRef(
-    ({ ...props }: VerseNumberProps, ref: React.Ref<HTMLElement>) => (
-        <React.Fragment>
-            <sup
-                {...props}
-                ref={ref}
-                contentEditable={false}
-                className={`usfm-marker-v usfm-editor-no-select ${numberClassNames(
-                    props.element
-                )}`}
-            >
-                {props.children}
-            </sup>
-            <SelectionSeparator />
-        </React.Fragment>
-    )
+    ({ ...props }: VerseNumberProps, ref: React.Ref<HTMLElement>) => {
+        const verseNumberText = Node.string(props.element).trim()
+
+        return (
+            <React.Fragment>
+                <sup
+                    {...props}
+                    ref={ref}
+                    contentEditable={false}
+                    draggable={!!verseNumberText && verseNumberText !== "front"}
+                    className={`usfm-marker-v usfm-editor-no-select ${numberClassNames(
+                        props.element
+                    )}`}
+                >
+                    {props.children}
+                </sup>
+                <SelectionSeparator />
+            </React.Fragment>
+        )
+    }
 )
 
 VerseNumber.displayName = "VerseNumber"
@@ -97,12 +102,35 @@ function withVerseTooltip<P extends VerseNumberProps>(
             hideTooltip()
         }, [hideTooltip])
 
+        const handleDragStart = useCallback((event: React.DragEvent<HTMLElement>) => {
+            // Prevent Slate from processing the drag event on contentEditable={false} elements
+            event.stopPropagation()
+            // Set drag effect for visual feedback
+            event.dataTransfer.effectAllowed = "move"
+
+            // Store the verse path in the drag data
+            try {
+                const verseNumberPath = ReactEditor.findPath(editor, props.element)
+                const verseNodeEntry = MyEditor.getVerseNode(editor, verseNumberPath)
+
+                if (verseNodeEntry) {
+                    const [, versePath] = verseNodeEntry
+                    // Store the path as a JSON string
+                    event.dataTransfer.setData("text/plain", JSON.stringify(versePath.concat(0))) // path to the verse number leaf
+                }
+            } catch (error) {
+                // Silently fail if we can't find the verse path
+                console.log("Failed to store verse path on drag start:", error)
+            }
+        }, [editor, props.element])
+
         return (
             <VerseNum
                 {...props}
                 ref={verseNumberRef}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
+                onDragStart={handleDragStart}
             />
         )
     }

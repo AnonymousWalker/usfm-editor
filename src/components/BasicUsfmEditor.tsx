@@ -9,6 +9,7 @@ import {
     Element,
     Descendant,
     NodeEntry,
+    Path,
 } from "slate"
 import {
     renderElementByType,
@@ -33,6 +34,7 @@ import { slateToUsfm } from "../transforms/slateToUsfm"
 import { debounce, flowRight, isEqual } from "lodash"
 import { MyTransforms } from "../plugins/helpers/MyTransforms"
 import { SelectionTransforms } from "../plugins/helpers/SelectionTransforms"
+import { VerseTransforms } from "../plugins/helpers/VerseTransforms"
 import {
     parseIdentificationFromUsfm,
     filterInvalidIdentification,
@@ -305,6 +307,53 @@ export class BasicUsfmEditor
         // setTimeout(() => this.updateSelectionMenuState(), 0)
     }
 
+    onDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    onDrop = (event: React.DragEvent<HTMLDivElement>): void => {
+        if (this.props.readOnly) return
+
+        event.preventDefault()
+
+        try {
+            // Retrieve the dragged verse path from the drag data
+            const draggedVersePathData = event.dataTransfer.getData("text/plain")
+            console.log("draggedVersePathData", draggedVersePathData)
+            let draggedVersePath: Path | undefined = undefined
+
+            if (draggedVersePathData) {
+                try {
+                    draggedVersePath = JSON.parse(draggedVersePathData) as Path
+                } catch (error) {
+                    console.debug("Failed to parse dragged verse path:", error)
+                }
+            }
+
+            // Get the drop location from the event (similar to how clicking works)
+            const dropRange = ReactEditor.findEventRange(this.slateEditor, event)
+
+            if (dropRange) {
+                // Set the cursor to the drop location first
+                Transforms.select(this.slateEditor, dropRange)
+                const newVersePath = VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange)
+
+                // Delete the original verse at draggedVersePath if it exists
+                if (draggedVersePath && Editor.hasPath(this.slateEditor, draggedVersePath)) {
+                    console.log("deleting verse at path", draggedVersePath)
+                    try {
+                        VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath)
+                    } catch (error) {
+                        console.debug("Failed to delete original verse after drag-and-drop:", error)
+                    }
+                }
+            }
+        } catch (error) {
+            console.debug("Failed to handle verse drag-and-drop:", error)
+        }
+    }
+
     decorate = (entry: NodeEntry): Range[] => {
         const suggestionRanges = decorateWithSuggestion(this.slateEditor, entry)
         const patternRanges = decorateWithPatternHighlight(this.slateEditor, entry)
@@ -505,6 +554,8 @@ export class BasicUsfmEditor
                             onKeyDown={this.onKeyDown}
                             onKeyUp={this.onKeyUp}
                             onMouseUp={this.onMouseUp}
+                            onDragOver={this.onDragOver}
+                            onDrop={this.onDrop}
                             onContextMenu={this.onContextMenu}
                             className={"usfm-editor"}
                         />
