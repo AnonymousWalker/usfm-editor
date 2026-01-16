@@ -320,7 +320,9 @@ export class BasicUsfmEditor
         try {
             // Retrieve the dragged verse path from the drag data
             const draggedVersePathData = event.dataTransfer.getData("text/plain")
-            
+            // Retrieve the verse number from the drag data
+            const draggedVerseNumber = event.dataTransfer.getData("application/x-verse-number")
+
             let draggedVersePath: Path | undefined = undefined
 
             if (draggedVersePathData) {
@@ -337,12 +339,21 @@ export class BasicUsfmEditor
             if (dropRange) {
                 // Set the cursor to the drop location first
                 Transforms.select(this.slateEditor, dropRange)
-                const newVersePath = VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange)
+
+                // Use the verse number from drag data, defaulting to "1" if not found or if it's "front"
+                const verseNumber: string = (draggedVerseNumber && draggedVerseNumber !== "front")
+                    ? draggedVerseNumber
+                    : "1"
+
+                // Add verse at the drop location with the specified verse number
+                // Don't update remaining verses since we're moving (not adding) a verse
+                const newVersePath = VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange, verseNumber, false)
 
                 // Delete the original verse at draggedVersePath if it exists
                 if (draggedVersePath && Editor.hasPath(this.slateEditor, draggedVersePath)) {
+                    console.log("deleting original verse: ", draggedVersePath)
                     try {
-                        VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath)
+                        VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath, false)
                     } catch (error) {
                         console.debug("Failed to delete original verse after drag-and-drop:", error)
                     }

@@ -61,7 +61,7 @@ function removeVerseAndConcatenateContentsWithPrevious(
     const [_thisVerse, thisVersePath] = thisVerseEntry
     const thisVerseNumPath = thisVersePath.concat(0)
 
-    _insertLeadingSpaceIfNecessary(editor, thisVersePath)
+    // _insertLeadingSpaceIfNecessary(editor, thisVersePath)
     Transforms.removeNodes(editor, { at: thisVerseNumPath })
     Transforms.mergeNodes(editor, { at: thisVersePath })
     MyTransforms.moveToEndOfLastLeaf(editor, Path.previous(thisVersePath))
@@ -114,7 +114,7 @@ function addVerse(editor: Editor, path: Path): void {
     )
 }
 
-function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: string): Path | null {
+function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: string, updateRemainingVerses: boolean = true): Path | null {
     if (!selection) return null
 
     // Get the start of the selection
@@ -148,7 +148,7 @@ function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: str
     }
 
     // Call the main function with the selection start point and verse number
-    const result = addVerseAtPoint(editor, selectionStart, verseNumber)
+    const result = addVerseAtPoint(editor, selectionStart, verseNumber, updateRemainingVerses)
     
     // If we inserted a space, remove it now
     if (insertedSpace) {
@@ -161,11 +161,10 @@ function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: str
         })
     }
     
-    // Note: incrementSubsequentVerses is already called inside addVerseAtPoint
     return result
 }
 
-function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): Path | null {
+function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string, updateRemainingVerses: boolean = true): Path | null {
     if (!point) return null
 
     // Find the verse node and container information
@@ -183,8 +182,10 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
         const newVersePath = Path.next(versePath)
         Transforms.insertNodes(editor, newVerse, { at: newVersePath })
         MyTransforms.moveToEndOfLastLeaf(editor, newVersePath)
-        // Increment verse numbers of subsequent verses (though there shouldn't be any at the end)
-        incrementSubsequentVerses(editor, newVersePath)
+        // Increment verse numbers of subsequent verses if flag is true
+        if (updateRemainingVerses) {
+            incrementSubsequentVerses(editor, newVersePath)
+        }
         return newVersePath
     }
 
@@ -238,8 +239,10 @@ function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): 
             }
         }
         
-        // Increment verse numbers of subsequent verses
-        incrementSubsequentVerses(editor, newVersePath)
+        // Increment verse numbers of subsequent verses if flag is true
+        if (updateRemainingVerses) {
+            incrementSubsequentVerses(editor, newVersePath)
+        }
         
         return newVersePath
     } catch (error) {
@@ -495,9 +498,9 @@ function _insertLeadingSpace(
  * Deletes a verse at the given path (or current selection if no path provided).
  * If there's a previous verse, merges the verse contents with it.
  * Otherwise, just removes the verse number.
- * Also decrements verse numbers of subsequent verses.
+ * Optionally decrements verse numbers of subsequent verses based on updateRemainingVerses flag.
  */
-function deleteVerse(editor: Editor, versePath?: Path): void {
+function deleteVerse(editor: Editor, versePath?: Path, updateRemainingVerses: boolean = true): void {
     const verseNodeEntry = versePath
         ? MyEditor.getVerseNode(editor, versePath)
         : MyEditor.getVerseNode(editor)
@@ -511,14 +514,17 @@ function deleteVerse(editor: Editor, versePath?: Path): void {
     const prevVerse = MyEditor.getPreviousVerse(editor, path)
     if (prevVerse) {
         // Decrement verse numbers of subsequent verses before merging
-        // (we need to do this before the merge because the verse will be removed)
-        decrementSubsequentVerses(editor, path)
+        if (updateRemainingVerses) {
+            decrementSubsequentVerses(editor, path)
+        }
         // Use the existing transform to remove verse and concatenate
         removeVerseAndConcatenateContentsWithPrevious(editor, verseNumPath)
     } else {
         // If no previous verse, just remove the verse number
         Transforms.removeNodes(editor, { at: verseNumPath })
-        // Decrement verse numbers of subsequent verses
-        decrementSubsequentVerses(editor, path)
+
+        if (updateRemainingVerses) {
+            decrementSubsequentVerses(editor, path)
+        }
     }
 }

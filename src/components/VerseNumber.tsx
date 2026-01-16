@@ -108,15 +108,18 @@ function withVerseTooltip<P extends VerseNumberProps>(
             // Set drag effect for visual feedback
             event.dataTransfer.effectAllowed = "move"
 
-            // Store the verse path in the drag data
+            // Store the verse path and verse number in the drag data
             try {
                 const verseNumberPath = ReactEditor.findPath(editor, props.element)
                 const verseNodeEntry = MyEditor.getVerseNode(editor, verseNumberPath)
 
                 if (verseNodeEntry) {
-                    const [, versePath] = verseNodeEntry
-                    // Store the path as a JSON string
-                    event.dataTransfer.setData("text/plain", JSON.stringify(versePath.concat(0))) // path to the verse number leaf
+                    const [verse, versePath] = verseNodeEntry
+                    // Store the verse path as JSON string (for deletion)
+                    event.dataTransfer.setData("text/plain", JSON.stringify(versePath.concat(0))) // concat(0) for verse number leaf node
+                    // Store the verse number in a separate data type (for adding the verse)
+                    const verseNumberStr = Node.string(verse.children[0])
+                    event.dataTransfer.setData("application/x-verse-number", verseNumberStr)
                 }
             } catch (error) {
                 // Silently fail if we can't find the verse path
