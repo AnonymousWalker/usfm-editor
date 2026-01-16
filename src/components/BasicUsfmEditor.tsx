@@ -318,49 +318,79 @@ export class BasicUsfmEditor
         event.preventDefault()
 
         try {
-            // Retrieve the dragged verse path from the drag data
+            // Retrieve drag data
             const draggedVersePathData = event.dataTransfer.getData("text/plain")
-            // Retrieve the verse number from the drag data
             const draggedVerseNumber = event.dataTransfer.getData("application/x-verse-number")
 
-            let draggedVersePath: Path | undefined = undefined
-
+            // Parse dragged verse path
+            let draggedVersePath: Path | undefined
             if (draggedVersePathData) {
                 try {
                     draggedVersePath = JSON.parse(draggedVersePathData) as Path
                 } catch (error) {
                     console.debug("Failed to parse dragged verse path:", error)
+                    return
                 }
             }
 
-            // Get the drop location from the event (similar to how clicking works)
+            // Get drop location
             const dropRange = ReactEditor.findEventRange(this.slateEditor, event)
+            if (!dropRange) return
 
-            if (dropRange) {
-                // Set the cursor to the drop location first
-                Transforms.select(this.slateEditor, dropRange)
+            // Set cursor to drop location
+            Transforms.select(this.slateEditor, dropRange)
 
-                // Use the verse number from drag data, defaulting to "1" if not found or if it's "front"
-                const verseNumber: string = (draggedVerseNumber && draggedVerseNumber !== "front")
-                    ? draggedVerseNumber
-                    : "1"
+            // Get verse number from drag data, defaulting to "1"
+            const verseNumber: string = (draggedVerseNumber && draggedVerseNumber !== "front")
+                ? draggedVerseNumber
+                : "1"
 
-                // Add verse at the drop location with the specified verse number
-                // Don't update remaining verses since we're moving (not adding) a verse
-                const newVersePath = VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange, verseNumber, false)
+            // Determine drag direction by comparing verse indices
+            const isForwardDrag = this.calculateDragDirection(draggedVersePath, dropRange.focus.path)
 
-                // Delete the original verse at draggedVersePath if it exists
-                if (draggedVersePath && Editor.hasPath(this.slateEditor, draggedVersePath)) {
-                    console.log("deleting original verse: ", draggedVersePath)
-                    try {
-                        VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath, false)
-                    } catch (error) {
-                        console.debug("Failed to delete original verse after drag-and-drop:", error)
-                    }
-                }
+            // Move verse: add then delete if forward, delete then add if backward
+            // Don't update remaining verses since we're moving (not adding/deleting) a verse
+            const updateRemainingVerses = false
+
+            if (isForwardDrag) {
+                VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange, verseNumber, updateRemainingVerses)
+                this.deleteDraggedVerse(draggedVersePath)
+            } else {
+                this.deleteDraggedVerse(draggedVersePath)
+                VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange, verseNumber, updateRemainingVerses)
             }
         } catch (error) {
             console.debug("Failed to handle verse drag-and-drop:", error)
+        }
+    }
+
+    private calculateDragDirection(draggedVersePath: Path | undefined, dropPath: Path): boolean {
+        if (!draggedVersePath || !Editor.hasPath(this.slateEditor, draggedVersePath)) {
+            return true // default to forward
+        }
+
+        try {
+            const dropVerseNodeEntry = MyEditor.getVerseNode(this.slateEditor, dropPath)
+            if (!dropVerseNodeEntry) return true
+
+            const [, dropVersePath] = dropVerseNodeEntry
+            // Compare verse indices: draggedVersePath[1] <= dropVersePath[1]
+            return draggedVersePath[1] <= dropVersePath[1]
+        } catch (error) {
+            console.debug("Failed to determine drag direction:", error)
+            return true
+        }
+    }
+
+    private deleteDraggedVerse(draggedVersePath: Path | undefined): void {
+        if (!draggedVersePath || !Editor.hasPath(this.slateEditor, draggedVersePath)) {
+            return
+        }
+
+        try {
+            VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath, false)
+        } catch (error) {
+            console.debug("Failed to delete original verse after drag-and-drop:", error)
         }
     }
 
