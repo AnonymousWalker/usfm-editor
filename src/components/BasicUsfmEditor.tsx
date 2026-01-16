@@ -311,6 +311,21 @@ export class BasicUsfmEditor
     onDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
         event.preventDefault()
         event.stopPropagation()
+
+        try {
+            const dragOverRange = ReactEditor.findEventRange(this.slateEditor, event)
+            if (dragOverRange) {
+                // Clamp to word boundary and update state
+                const clampedRange = this.clampDropLocationToWordBoundary(dragOverRange)
+                // Move cursor to the clamped position
+                Transforms.select(this.slateEditor, {
+                    anchor: clampedRange.focus,
+                    focus: clampedRange.focus,
+                })
+            }
+        } catch (error) {
+            // Silently fail if we can't determine drag over position
+        }
     }
 
     onDrop = (event: React.DragEvent<HTMLDivElement>): void => {
@@ -362,6 +377,11 @@ export class BasicUsfmEditor
             } else {
                 this.deleteDraggedVerse(draggedVersePath)
                 VerseTransforms.addVerseAtSelection(this.slateEditor, dropRange, verseNumber, updateRemainingVerses)
+                // moves cursor to correct position after backward drag
+                Transforms.select(this.slateEditor, {
+                    anchor: dropRange.focus,
+                    focus: dropRange.focus,
+                })
             }
         } catch (error) {
             console.debug("Failed to handle verse drag-and-drop:", error)
