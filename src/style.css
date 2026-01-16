@@ -59,6 +59,7 @@ hr.usfm-editor-hr {
 .usfm-editor-chapter {
     overflow: auto;
     margin: 0 0.75em 0.5em 0.75em;
+    padding-top: 0.25em;
 }
 
 
@@ -70,14 +71,6 @@ hr.usfm-editor-hr {
     text-decoration-style: wavy;
     text-decoration-color: #e53935;
     text-decoration-thickness: 1px;
-    background-color: #e0e0e0;
-    border-radius: 4px;
-    padding: 4px 12px 4px 4px;
-}
-.usfm-editor-empty-verse .usfm-marker-p {
-    margin: 0 0.5em 0 0;
-    background-color: #e0e0e0;
-    border-radius: 4px;
 }
 
 .usfm-editor-inline {
@@ -195,6 +188,17 @@ hr.usfm-editor-hr {
     white-space: nowrap;
     font-weight: bold;
     font-size: 0.75em;
+    border: 1px solid #cdcdcd;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    padding: 4px 6px 10px 6px;
+    cursor: grab;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.usfm-marker-v:hover {
+    background-color: #e3f2fd;
+    border-color: #6797be;
 }
 
 .usfm-editor-no-select {

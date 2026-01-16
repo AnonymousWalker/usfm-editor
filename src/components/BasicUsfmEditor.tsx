@@ -320,7 +320,7 @@ export class BasicUsfmEditor
         try {
             // Retrieve the dragged verse path from the drag data
             const draggedVersePathData = event.dataTransfer.getData("text/plain")
-            console.log("draggedVersePathData", draggedVersePathData)
+            
             let draggedVersePath: Path | undefined = undefined
 
             if (draggedVersePathData) {
@@ -341,7 +341,6 @@ export class BasicUsfmEditor
 
                 // Delete the original verse at draggedVersePath if it exists
                 if (draggedVersePath && Editor.hasPath(this.slateEditor, draggedVersePath)) {
-                    console.log("deleting verse at path", draggedVersePath)
                     try {
                         VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath)
                     } catch (error) {

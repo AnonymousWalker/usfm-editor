@@ -124,6 +124,11 @@ function withVerseTooltip<P extends VerseNumberProps>(
             }
         }, [editor, props.element])
 
+        const handleClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+            event.preventDefault()
+            event.stopPropagation()
+        }, [])
+
         return (
             <VerseNum
                 {...props}
@@ -131,6 +136,7 @@ function withVerseTooltip<P extends VerseNumberProps>(
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 onDragStart={handleDragStart}
+                onClick={handleClick}
             />
         )
     }

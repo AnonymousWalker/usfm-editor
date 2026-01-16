@@ -168,8 +168,6 @@ function addVerseAtSelection(editor: Editor, selection: Range, newVerseNum?: str
 function addVerseAtPoint(editor: Editor, point: Point, verseNumberStr: string): Path | null {
     if (!point) return null
 
-    console.log("point", point)
-
     // Find the verse node and container information
     const verseInfo = getVerseAndContainerInfo(editor, point)
     if (!verseInfo) return null
