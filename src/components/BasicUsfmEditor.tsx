@@ -10,6 +10,7 @@ import {
     Descendant,
     NodeEntry,
     Path,
+    Text,
 } from "slate"
 import {
     renderElementByType,
@@ -334,8 +335,11 @@ export class BasicUsfmEditor
             }
 
             // Get drop location
-            const dropRange = ReactEditor.findEventRange(this.slateEditor, event)
+            let dropRange = ReactEditor.findEventRange(this.slateEditor, event)
             if (!dropRange) return
+
+            // Clamp drop location to nearest space to the left (word boundary)
+            dropRange = this.clampDropLocationToWordBoundary(dropRange)
 
             // Set cursor to drop location
             Transforms.select(this.slateEditor, dropRange)
@@ -391,6 +395,53 @@ export class BasicUsfmEditor
             VerseTransforms.deleteVerse(this.slateEditor, draggedVersePath, false)
         } catch (error) {
             console.debug("Failed to delete original verse after drag-and-drop:", error)
+        }
+    }
+
+    private clampDropLocationToWordBoundary(range: Range): Range {
+        try {
+            const point = range.focus
+            const [node] = Editor.node(this.slateEditor, point.path)
+
+            // Only clamp if we're in a text node
+            if (!Text.isText(node)) {
+                return range
+            }
+
+            const text = node.text
+            const offset = point.offset
+
+            // If already at the start, no need to clamp
+            if (offset === 0) {
+                return range
+            }
+
+            // If already at a space (position is right of a space), no need to clamp
+            if (text[offset - 1] === " ") {
+                return range
+            }
+
+            // Find the nearest space to the left
+            let spaceIndex = -1
+            for (let i = offset - 1; i >= 0; i--) {
+                if (text[i] === " ") {
+                    spaceIndex = i
+                    break
+                }
+            }
+
+            // If space found, clamp to position right after the space (spaceIndex + 1)
+            // If no space found, move to start of text node
+            const clampedOffset = spaceIndex >= 0 ? spaceIndex + 1 : 0
+
+            // Return new range with clamped position
+            return {
+                anchor: { path: point.path, offset: clampedOffset },
+                focus: { path: point.path, offset: clampedOffset },
+            }
+        } catch (error) {
+            console.debug("Failed to clamp drop location:", error)
+            return range
         }
     }
 
